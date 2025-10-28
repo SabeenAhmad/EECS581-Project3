@@ -30,6 +30,7 @@
     "expo-web-browser": "~15.0.8",
     "firebase": "^12.4.0",
     "leaflet": "^1.9.4",
+    "papaparse": "^5.5.3",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-leaflet": "^5.0.0",
