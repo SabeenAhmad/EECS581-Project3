@@ -11,10 +11,10 @@ export default [
   },
   {
     id: 2,
-    name: 'Missouri Street Garage',
+    name: 'Mississippi Street Garage',
     total: 100,
     available: 48,
-    permit: 'Missouri Street Garage',
+    permit: 'Mississippi Street Garage',
     lastUpdated: '11:42 AM',
     latitude: 38.960689,
     longitude: -95.243439,
