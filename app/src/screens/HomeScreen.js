@@ -87,7 +87,7 @@ export default function HomeScreen() {
             />
 
             {filteredLots.map((lot) => {
-              const { occupied, lastUpdated } = getLatestAvailability(lot);
+              const { occupied, available, lastUpdated } = getLatestAvailability(lot);
               return (
                 <CircleMarker
                   key={lot.id}
@@ -114,7 +114,7 @@ export default function HomeScreen() {
       {lot.name}
     </div>
     <div style={{ fontSize: 14, color: '#333' }}>
-      {occupied}/{lot.total} spots taken
+      {available}/{lot.total} spots available
     </div>
     <div style={{ fontSize: 12, color: '#777', marginTop: 2 }}>
       Last updated: {lastUpdated}
