@@ -31,7 +31,7 @@ export default [
   },
   {
     id: 4,
-    name: 'Capital Federate Lot',
+    name: 'Capital Federal Lot',
     total: 300,
     available: 154,
     permit: 'Yellow',
