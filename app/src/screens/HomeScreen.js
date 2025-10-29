@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'expo-router';
 import {
   View,
   TextInput,
@@ -9,7 +10,6 @@ import {
   Text,
 } from 'react-native';
 import lots from '../data/mockParking';
-
 const { width, height } = Dimensions.get('window');
 
 let MapView, Marker; // for native maps
@@ -34,7 +34,7 @@ export default function HomeScreen() {
   const [search, setSearch] = useState('');
   const [LeafletReady, setLeafletReady] = useState(false);
   const [LeafletModules, setLeafletModules] = useState(null);
-
+  const router = useRouter();
   const region = {
     latitude: 38.9543,
     longitude: -95.2558,
@@ -98,12 +98,29 @@ export default function HomeScreen() {
                   fillOpacity={0.9}
                 >
                   <Popup>
-                    <b>{lot.name}</b>
-                    <br />
-                    {available}/{lot.total} spots available
-                    <br />
-                    <small>Last updated: {lastUpdated}</small>
-                  </Popup>
+  <div style={{ fontFamily: 'Arial, sans-serif', textAlign: 'center' }}>
+    <div
+      onClick={() => router.push(`/StatsPage?lot=${encodeURIComponent(lot.name)}`)}
+      style={{
+        color: '#1E90FF',
+        fontWeight: '600',
+        cursor: 'pointer',
+        fontSize: 16,
+        marginBottom: 4,
+      }}
+    >
+      {lot.name}
+    </div>
+    <div style={{ fontSize: 14, color: '#333' }}>
+      {available}/{lot.total} spots available
+    </div>
+    <div style={{ fontSize: 12, color: '#777', marginTop: 2 }}>
+      Last updated: {lastUpdated}
+    </div>
+  </div>
+</Popup>
+
+
                 </CircleMarker>
               );
             })}
