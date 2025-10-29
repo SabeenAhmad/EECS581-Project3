@@ -84,6 +84,7 @@ export default [
       { time: '15:10', occupied: 43 },
       { time: '16:00', occupied: 28 },
       { time: '17:05', occupied: 20 },
+      { time: '18:05', occupied: 70 },
     ],
   },
   {

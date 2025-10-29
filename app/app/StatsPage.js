@@ -26,8 +26,8 @@ export default function StatsPage() {
 
   // Dynamic bar color
   let barColor = '#9AE29B'; // green
-  if (percentFull >= 80) barColor = '#FF9C9C'; // red
-  else if (percentFull >= 50) barColor = '#FFE57E'; // yellow
+  if (percentFull >= 70) barColor = '#FF9C9C'; // red
+  else if (percentFull >= 40) barColor = '#FFE57E'; // yellow
 
   const colors = {
     Green: { bg: '#C8FACC', border: '#8DD493', text: '#2E7D32' },
