@@ -6,6 +6,7 @@ export default [
     total: 60,
     latitude: 38.955414,
     longitude: -95.253775,
+    permit: 'Red',
     dataPoints: [
       { time: '07:00', occupied: 10 },
       { time: '07:27', occupied: 18 },
@@ -32,6 +33,7 @@ export default [
     total: 100,
     latitude: 38.960689,
     longitude: -95.243439,
+    permit: 'Garage',
     dataPoints: [
       { time: '07:00', occupied: 25 },
       { time: '07:18', occupied: 28 },
@@ -63,6 +65,7 @@ export default [
     total: 80,
     latitude: 38.954495,
     longitude: -95.256091,
+    permit: 'Garage',
     dataPoints: [
       { time: '07:15', occupied: 8 },
       { time: '07:50', occupied: 15 },
@@ -89,6 +92,7 @@ export default [
     total: 300,
     latitude: 38.952318,
     longitude: -95.250001,
+    permit: 'Yellow',
     dataPoints: [
       { time: '07:00', occupied: 50 },
       { time: '07:22', occupied: 78 },
