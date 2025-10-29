@@ -24,9 +24,11 @@ if (Platform.OS !== 'web') {
 function getLatestAvailability(lot) {
   const latest = lot.dataPoints[lot.dataPoints.length - 1];
   const available = lot.total - latest.occupied;
+  const occupied = latest.occupied;
   return {
     available,
     lastUpdated: latest.time,
+    occupied
   };
 }
 
@@ -85,7 +87,7 @@ export default function HomeScreen() {
             />
 
             {filteredLots.map((lot) => {
-              const { available, lastUpdated } = getLatestAvailability(lot);
+              const { occupied, lastUpdated } = getLatestAvailability(lot);
               return (
                 <CircleMarker
                   key={lot.id}
@@ -112,7 +114,7 @@ export default function HomeScreen() {
       {lot.name}
     </div>
     <div style={{ fontSize: 14, color: '#333' }}>
-      {available}/{lot.total} spots available
+      {occupied}/{lot.total} spots taken
     </div>
     <div style={{ fontSize: 12, color: '#777', marginTop: 2 }}>
       Last updated: {lastUpdated}
