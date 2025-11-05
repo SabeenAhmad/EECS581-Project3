@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useFonts, Poppins_600SemiBold } from '@expo-google-fonts/poppins';
@@ -9,6 +9,9 @@ export default function StatsPage() {
   const { lot } = useLocalSearchParams();
   const lotData = lots.find((l) => l.name === lot);
   const router = useRouter();
+
+  const [lastUpdatedTime, setLastUpdatedTime] = useState(new Date());
+
   const [fontsLoaded] = useFonts({
     Poppins_600SemiBold,
     Inter_400Regular,
@@ -18,11 +21,13 @@ export default function StatsPage() {
   if (!fontsLoaded) return null;
   if (!lotData) return <Text>Lot not found</Text>;
 
+
   const latest = lotData.dataPoints[lotData.dataPoints.length - 1];
   const occupied = latest.occupied;
   const percentFull = (occupied / lotData.total) * 100;
   const lastUpdated = latest.time;
   const permitType = lotData.permit;
+
 
   // Dynamic bar color
   let barColor = '#9AE29B'; // green
@@ -60,7 +65,14 @@ export default function StatsPage() {
         <Text style={styles.infoText}>
           {occupied}/{lotData.total} spots taken
         </Text>
-        <Text style={styles.infoText}>Last updated: {lastUpdated}</Text>
+        <Text style={styles.infoText}>Last updated: {lastUpdatedTime.toLocaleTimeString()}</Text>
+      </View>
+      
+      {/* Refresh Button */}
+      <View style={styles.refreshContainer}>
+        <Text style={styles.refreshButton} onPress={() => setLastUpdatedTime(new Date())}>
+          ↻ Refresh
+        </Text>
       </View>
 
       {/* Permit Tag */}
@@ -145,6 +157,24 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  refreshContainer: {
+  marginTop: 18,
+  alignSelf: 'flex-start',
+  },
+  refreshButton: {
+    fontFamily: 'Inter_600SemiBold',
+    backgroundColor: '#4A90E2',
+    color: 'white',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    fontSize: 15,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+
 
 
 });
