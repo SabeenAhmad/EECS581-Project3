@@ -8,6 +8,7 @@ import {
   Image,
   Platform,
   Text,
+  TouchableOpacity,
 } from 'react-native';
 import lots from '../data/mockParking';
 const { width, height } = Dimensions.get('window');
@@ -47,6 +48,37 @@ export default function HomeScreen() {
   const filteredLots = lots.filter((lot) =>
     lot.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  const onSelectLot = (lot) => {
+    // set search to the selected lot and navigate to its stats page
+    setSearch(lot.name);
+    router.push(`/StatsPage?lot=${encodeURIComponent(lot.name)}`);
+  };
+
+  const renderSuggestions = () => {
+    if (!search.trim()) return null; // if nothing is typed, don't show suggestions
+
+    if (filteredLots.length === 0) { // if there are no matching lots
+      return (
+        <View style={styles.suggestions}>
+          <Text style={styles.noResults}>No lots found</Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.suggestions}>
+        {filteredLots.slice(0, 6).map((lot) => {
+          const { available } = getLatestAvailability(lot);
+          return (
+            <TouchableOpacity key={lot.id} style={styles.suggestionItem} onPress={() => onSelectLot(lot)}> 
+              <Text style={styles.suggestionText}>{lot.name} — {available}/{lot.total}</Text>
+            </TouchableOpacity> // makes each suggestion clickable; TouchableOpacity lowers the opacity of the item (lot) when pressed
+          );
+        })}
+      </View>
+    );
+  };
 
   // 🌐 Load Leaflet dynamically for web
   useEffect(() => {
@@ -137,6 +169,7 @@ export default function HomeScreen() {
             value={search}
             onChangeText={setSearch}
           />
+          {renderSuggestions()} {/* Show suggestions below search if they are available */}
         </View>
       </View>
     );
@@ -177,6 +210,7 @@ export default function HomeScreen() {
           value={search}
           onChangeText={setSearch}
         />
+        {renderSuggestions()}
       </View>
     </View>
   );
@@ -201,5 +235,25 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     borderRadius: 20,
+  },
+  suggestions: {
+    maxHeight: 220,
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderColor: '#eee',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  suggestionItem: {
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+  },
+  suggestionText: {
+    fontSize: 15,
+    color: '#111',
+  },
+  noResults: {
+    padding: 8,
+    color: '#666',
   },
 });
