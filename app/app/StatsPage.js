@@ -1,10 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useFonts, Poppins_600SemiBold } from '@expo-google-fonts/poppins';
 import { Inter_400Regular, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import lots from '../src/data/mockParking';
 import { useRouter } from 'expo-router';
+//added imports
+import { BarChart } from 'react-native-chart-kit';
 export default function StatsPage() {
   const { lot } = useLocalSearchParams();
   const lotData = lots.find((l) => l.name === lot);
@@ -29,6 +31,52 @@ export default function StatsPage() {
   if (percentFull >= 70) barColor = '#FF9C9C'; // red
   else if (percentFull >= 40) barColor = '#FFE57E'; // yellow
 
+  // Generate hourly usage data from 6AM to 11PM
+  // Generate hourly usage data from 7AM to 6PM
+  const generateHourlyData = () => {
+    const hours = [];
+    const usage = [];
+    
+    for (let hour = 7; hour <= 18; hour++) {
+      hours.push(hour <= 12 ? `${hour}AM` : hour === 12 ? '12PM' : `${hour-12}PM`);
+      
+      // Find closest data point or estimate
+      const closest = lotData.dataPoints.reduce((prev, curr) => {
+        const prevHour = parseInt(prev.time.split(':')[0]);
+        const currHour = parseInt(curr.time.split(':')[0]);
+        return Math.abs(currHour - hour) < Math.abs(prevHour - hour) ? curr : prev;
+      });
+      
+      const percentage = (closest.occupied / lotData.total) * 100;
+      usage.push(percentage);
+    }
+    
+    return { hours, usage };
+  };
+
+  const { hours, usage } = generateHourlyData();
+
+  const chartConfig = {
+    backgroundColor: 'transparent',
+    backgroundGradientFrom: 'transparent',
+    backgroundGradientTo: 'transparent',
+    decimalPlaces: 0,
+    color: (opacity = 1, index) => {
+      const value = usage[index];
+      if (value >= 70) return `rgba(255, 156, 156, ${opacity})`; // red
+      if (value >= 40) return `rgba(255, 229, 126, ${opacity})`; // yellow
+      return `rgba(154, 226, 155, ${opacity})`; // green
+    },
+    labelColor: () => '#333',
+    style: { borderRadius: 16 },
+    propsForLabels: { 
+      fontSize: 10,
+      fontFamily: 'Inter_400Regular'
+    },
+    barPercentage: 0.8,
+    categoryPercentage: 0.9,
+  };
+
   const colors = {
     Green: { bg: '#C8FACC', border: '#8DD493', text: '#2E7D32' },
     Yellow: { bg: '#FFF7A3', border: '#E8D87A', text: '#A68B00' },
@@ -39,7 +87,7 @@ export default function StatsPage() {
   const color = colors[permitType];
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
       {/* Home Button */}
       <View style={styles.homeButtonContainer}>
         <Text style={styles.homeButton} onPress={() => router.push('/')}>
@@ -72,7 +120,71 @@ export default function StatsPage() {
       >
         <Text style={styles.permitText}>{permitType} Permit</Text>
       </View>
-    </View>
+      {/* Busy Hours Chart */}
+      <View style={styles.chartContainer}>
+        <Text style={styles.chartTitle}>Busy Hours</Text>
+        {/* Custom Bar Chart */}
+        <View style={styles.customChart}>
+          {/* Y-axis labels */}
+          <View style={styles.yAxisContainer}>
+            <Text style={styles.yAxisLabel}>{lotData.total}</Text>
+            <Text style={styles.yAxisLabel}>{Math.round(lotData.total * 0.75)}</Text>
+            <Text style={styles.yAxisLabel}>{Math.round(lotData.total * 0.5)}</Text>
+            <Text style={styles.yAxisLabel}>{Math.round(lotData.total * 0.25)}</Text>
+            <Text style={styles.yAxisLabel}>0</Text>
+          </View>
+          
+          <View style={styles.chartArea}>
+            {/* Y-axis line */}
+            <View style={styles.yAxisLine} />
+            
+            <View style={styles.barsContainer}>
+              {usage.map((value, index) => {
+                const actualValue = (value / 100) * lotData.total;
+                const barHeight = (actualValue / lotData.total) * 180; // Max height 180px
+                let barColor = '#9AE29B'; // green
+                if (value >= 70) barColor = '#FF9C9C'; // red
+                else if (value >= 40) barColor = '#FFE57E'; // yellow
+                
+                return (
+                  <View key={index} style={styles.barWrapper}>
+                    <View 
+                      style={[
+                        styles.bar, 
+                        { 
+                          height: barHeight, 
+                          backgroundColor: barColor 
+                        }
+                      ]} 
+                    />
+                    <Text style={styles.barLabel}>{hours[index]}</Text>
+                  </View>
+                );
+              })}
+            </View>
+            
+            {/* X-axis line */}
+            <View style={styles.xAxisLine} />
+          </View>
+        </View>
+        {/*
+        <View style={styles.legend}>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendColor, { backgroundColor: '#9AE29B' }]} />
+            <Text style={styles.legendText}>Light</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendColor, { backgroundColor: '#FFE57E' }]} />
+            <Text style={styles.legendText}>Moderate</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendColor, { backgroundColor: '#FF9C9C' }]} />
+            <Text style={styles.legendText}>Heavy</Text>
+          </View>
+        </View>
+        */}
+      </View>
+      </ScrollView>
   );
 }
 
@@ -128,8 +240,8 @@ const styles = StyleSheet.create({
   },
   homeButtonContainer: {
   position: 'absolute',
-  top: 50,
-  right: 40,
+  top: 30,
+  right: 20,
   zIndex: 10,
   },
   homeButton: {
@@ -145,6 +257,103 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  chartContainer: {
+    marginTop: 30,
+    marginBottom: 40,
+  },
+  chartTitle: {
+    fontSize: 32,
+    fontFamily: 'Poppins_600SemiBold',
+    color: '#222',
+    marginBottom: 15,
+  },
+  chart: {
+    borderRadius: 16,
+  },
+  customChart: {
+    height: 220,
+    flexDirection: 'row',
+    paddingBottom: 30,
+  },
+  yAxisContainer: {
+    justifyContent: 'space-between',
+    height: 180,
+    paddingRight: 10,
+    paddingTop: 0,
+  },
+  yAxisLabel: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    color: '#333',
+    textAlign: 'right',
+  },
+  chartArea: {
+    flex: 1,
+    position: 'relative',
+  },
+  yAxisLine: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    width: 1,
+    height: 180,
+    backgroundColor: '#ddd',
+  },
+  xAxisLine: {
+    position: 'absolute',
+    bottom: 10,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: '#ddd',
+  },
+  barsContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    height: 200,
+    paddingHorizontal: 10,
+    paddingLeft: 15,
+  },
+  barWrapper: {
+    alignItems: 'center',
+    flex: 1,
+    marginTop: 20,
+  },
+  bar: {
+    width: 30,
+    borderRadius: 2,
+    marginBottom: 0,
+  },
+  barLabel: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    color: '#333',
+    textAlign: 'center',
+    marginTop: 5,
+  },
+  legend: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 15,
+    gap: 20,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  legendColor: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  legendText: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    color: '#333',
+  },
+
 
 
 });
