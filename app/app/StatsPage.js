@@ -1,10 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useFonts, Poppins_600SemiBold } from '@expo-google-fonts/poppins';
 import { Inter_400Regular, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import lots from '../src/data/mockParking';
 import { useRouter } from 'expo-router';
+import PopularTimes from '../components/popular-times';
+
 export default function StatsPage() {
   const { lot } = useLocalSearchParams();
   const lotData = lots.find((l) => l.name === lot);
@@ -23,6 +25,15 @@ export default function StatsPage() {
   const percentFull = (occupied / lotData.total) * 100;
   const lastUpdated = latest.time;
   const permitType = lotData.permit;
+  const getHourlyData = () => {
+    const data = new Array(24).fill(0);
+    lotData.dataPoints.forEach((point) => {
+      const hour = parseInt(point.time.split(':')[0], 10);
+      const occupancyRate = (point.occupied / lotData.total) * 100;
+      data[hour] = occupancyRate;
+    });
+    return data;
+  };
 
   // Dynamic bar color
   let barColor = '#9AE29B'; // green
@@ -36,42 +47,44 @@ export default function StatsPage() {
     Garage: { bg: '#DDE1E7', border: '#B0B8C2', text: '#2E3A59' },
   };
 
-  const color = colors[permitType];
+  const color = colors[permitType] || colors.Garage;
 
   return (
     <View style={styles.container}>
-      {/* Home Button */}
-      <View style={styles.homeButtonContainer}>
-        <Text style={styles.homeButton} onPress={() => router.push('/')}>
-          ← Back to Home
-        </Text>
-      </View>
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        {/* Home Button */}
+        <View style={styles.homeButtonContainer}>
+          <Text style={styles.homeButton} onPress={() => router.push('/')}>
+            ← Back to Home
+          </Text>
+        </View>
 
-      {/* Title */}
-      <Text style={styles.title}>{lotData.name}</Text>
+        {/* Title */}
+        <View style={styles.titleContainer}>
+          <Text style={styles.title}>{lotData.name}</Text>
+        </View>
 
-      {/* Progress Bar */}
-      <View style={styles.progressContainer}>
-        <View style={[styles.progressFill, { width: `${percentFull}%`, backgroundColor: barColor }]} />
-      </View>
+        {/* Progress Bar */}
+        <View style={styles.progressContainer}>
+          <View style={[styles.progressFill, { width: `${percentFull}%`, backgroundColor: barColor }]} />
+        </View>
 
-      {/* Info Row */}
-      <View style={styles.infoRow}>
-        <Text style={styles.infoText}>
-          {occupied}/{lotData.total} spots taken
-        </Text>
-        <Text style={styles.infoText}>Last updated: {lastUpdated}</Text>
-      </View>
+        {/* Info Row */}
+        <View style={styles.infoRow}>
+          <Text style={styles.infoText}>{occupied}/{lotData.total} spots taken</Text>
+          <Text style={styles.infoText}>Last updated: {lastUpdated}</Text>
+        </View>
 
-      {/* Permit Tag */}
-      <View
-        style={[
-          styles.permitTag,
-          { backgroundColor: color.bg, borderColor: color.border },
-        ]}
-      >
-        <Text style={styles.permitText}>{permitType} Permit</Text>
-      </View>
+        {/* Permit Tag */}
+        <View style={[styles.permitTag, { backgroundColor: color.bg, borderColor: color.border }]}>
+          <Text style={[styles.permitText, { color: color.text }]}>{permitType} Permit</Text>
+        </View>
+
+        {/* Popular Times */}
+        <View style={styles.popularTimesContainer}>
+          <PopularTimes data={getHourlyData()} />
+        </View>
+      </ScrollView>
     </View>
   );
 }
