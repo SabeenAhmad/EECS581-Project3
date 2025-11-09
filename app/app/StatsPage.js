@@ -123,26 +123,50 @@ export default function StatsPage() {
       {/* Busy Hours Chart */}
       <View style={styles.chartContainer}>
         <Text style={styles.chartTitle}>Busy Hours</Text>
-        <BarChart
-          data={{
-            labels: hours,
-            datasets: [{ 
-              data: usage,
-              colors: usage.map(value => {
-                if (value >= 70) return () => '#FF9C9C'; // red
-                if (value >= 40) return () => '#FFE57E'; // yellow
-                return () => '#9AE29B'; // green
-              })
-            }]
-          }}
-          width={Dimensions.get('window').width - 80}
-          height={220}
-          chartConfig={chartConfig}
-          style={styles.chart}
-          showValuesOnTopOfBars={false}
-          fromZero={true}
-          withCustomBarColorFromData={true}
-        />
+        {/* Custom Bar Chart */}
+        <View style={styles.customChart}>
+          {/* Y-axis labels */}
+          <View style={styles.yAxisContainer}>
+            <Text style={styles.yAxisLabel}>{lotData.total}</Text>
+            <Text style={styles.yAxisLabel}>{Math.round(lotData.total * 0.75)}</Text>
+            <Text style={styles.yAxisLabel}>{Math.round(lotData.total * 0.5)}</Text>
+            <Text style={styles.yAxisLabel}>{Math.round(lotData.total * 0.25)}</Text>
+            <Text style={styles.yAxisLabel}>0</Text>
+          </View>
+          
+          <View style={styles.chartArea}>
+            {/* Y-axis line */}
+            <View style={styles.yAxisLine} />
+            
+            <View style={styles.barsContainer}>
+              {usage.map((value, index) => {
+                const actualValue = (value / 100) * lotData.total;
+                const barHeight = (actualValue / lotData.total) * 180; // Max height 180px
+                let barColor = '#9AE29B'; // green
+                if (value >= 70) barColor = '#FF9C9C'; // red
+                else if (value >= 40) barColor = '#FFE57E'; // yellow
+                
+                return (
+                  <View key={index} style={styles.barWrapper}>
+                    <View 
+                      style={[
+                        styles.bar, 
+                        { 
+                          height: barHeight, 
+                          backgroundColor: barColor 
+                        }
+                      ]} 
+                    />
+                    <Text style={styles.barLabel}>{hours[index]}</Text>
+                  </View>
+                );
+              })}
+            </View>
+            
+            {/* X-axis line */}
+            <View style={styles.xAxisLine} />
+          </View>
+        </View>
         {/*
         <View style={styles.legend}>
           <View style={styles.legendItem}>
@@ -245,6 +269,68 @@ const styles = StyleSheet.create({
   },
   chart: {
     borderRadius: 16,
+  },
+  customChart: {
+    height: 220,
+    flexDirection: 'row',
+    paddingBottom: 30,
+  },
+  yAxisContainer: {
+    justifyContent: 'space-between',
+    height: 180,
+    paddingRight: 10,
+    paddingTop: 0,
+  },
+  yAxisLabel: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    color: '#333',
+    textAlign: 'right',
+  },
+  chartArea: {
+    flex: 1,
+    position: 'relative',
+  },
+  yAxisLine: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    width: 1,
+    height: 180,
+    backgroundColor: '#ddd',
+  },
+  xAxisLine: {
+    position: 'absolute',
+    bottom: 10,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: '#ddd',
+  },
+  barsContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    height: 200,
+    paddingHorizontal: 10,
+    paddingLeft: 15,
+  },
+  barWrapper: {
+    alignItems: 'center',
+    flex: 1,
+    marginTop: 20,
+  },
+  bar: {
+    width: 30,
+    borderRadius: 2,
+    marginBottom: 0,
+  },
+  barLabel: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    color: '#333',
+    textAlign: 'center',
+    marginTop: 5,
   },
   legend: {
     flexDirection: 'row',
