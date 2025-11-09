@@ -10,6 +10,19 @@ import {
   Text,
 } from 'react-native';
 import lots from '../data/mockParking';
+
+// 🧠 Helper for saving filters on web
+const storage = {
+  async getItem(key) {
+    return Promise.resolve(localStorage.getItem(key));
+  },
+  async setItem(key, value) {
+    localStorage.setItem(key, value);
+    return Promise.resolve();
+  },
+};
+
+
 const { width, height } = Dimensions.get('window');
 
 let MapView, Marker; // for native maps
@@ -36,6 +49,45 @@ export default function HomeScreen() {
   const [search, setSearch] = useState('');
   const [LeafletReady, setLeafletReady] = useState(false);
   const [LeafletModules, setLeafletModules] = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedPermit, setSelectedPermit] = useState('All');
+  const [selectedAvailability, setSelectedAvailability] = useState('Any');
+
+// ✅ Load saved filters from localStorage
+  useEffect(() => {
+    const loadFilters = async () => {
+      try {
+        const savedPermit = await storage.getItem('selectedPermit');
+        const savedAvailability = await storage.getItem('selectedAvailability');
+        const savedSearch = await storage.getItem('searchText');
+
+        if (savedPermit) setSelectedPermit(savedPermit);
+        if (savedAvailability) setSelectedAvailability(savedAvailability);
+        if (savedSearch) setSearch(savedSearch);
+      } catch (err) {
+        console.log('Error loading filters:', err);
+      }
+    };
+
+    loadFilters();
+  }, []);
+
+  // 💾 Save filters whenever they change
+  useEffect(() => {
+    storage.setItem('selectedPermit', selectedPermit);
+  }, [selectedPermit]);
+
+  useEffect(() => {
+    storage.setItem('selectedAvailability', selectedAvailability);
+  }, [selectedAvailability]);
+
+  useEffect(() => {
+    storage.setItem('searchText', search);
+  }, [search]);
+
+  //end of what I added to save search
+
+  
   const router = useRouter();
   const region = {
     latitude: 38.9543,
@@ -44,11 +96,19 @@ export default function HomeScreen() {
     longitudeDelta: 0.02,
   };
 
-  const filteredLots = lots.filter((lot) =>
-    lot.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredLots = lots.filter((lot) => {
+    const nameMatch = lot.name.toLowerCase().includes(search.toLowerCase());
+    const permitMatch = selectedPermit === 'All' || lot.permit === selectedPermit;
 
-  // 🌐 Load Leaflet dynamically for web
+    const { available } = getLatestAvailability(lot);
+    let availMatch = true;
+    if (selectedAvailability === '> 20') availMatch = available > 20;
+    if (selectedAvailability === '> 40') availMatch = available > 40;
+    if (selectedAvailability === '> 60') availMatch = available > 60;
+
+    return nameMatch && permitMatch && availMatch;
+  });
+
   useEffect(() => {
     if (Platform.OS === 'web') {
       (async () => {
@@ -100,43 +160,85 @@ export default function HomeScreen() {
                   fillOpacity={0.9}
                 >
                   <Popup>
-  <div style={{ fontFamily: 'Arial, sans-serif', textAlign: 'center' }}>
-    <div
-      onClick={() => router.push(`/StatsPage?lot=${encodeURIComponent(lot.name)}`)}
-      style={{
-        color: '#1E90FF',
-        fontWeight: '600',
-        cursor: 'pointer',
-        fontSize: 16,
-        marginBottom: 4,
-      }}
-    >
-      {lot.name}
-    </div>
-    <div style={{ fontSize: 14, color: '#333' }}>
-      {available}/{lot.total} spots available
-    </div>
-    <div style={{ fontSize: 12, color: '#777', marginTop: 2 }}>
-      Last updated: {lastUpdated}
-    </div>
-  </div>
-</Popup>
-
-
+                    <div style={{ fontFamily: 'Arial, sans-serif', textAlign: 'center' }}>
+                      <div
+                        onClick={() => router.push(`/StatsPage?lot=${encodeURIComponent(lot.name)}`)}
+                        style={{
+                          color: '#1E90FF',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          fontSize: 16,
+                          marginBottom: 4,
+                        }}
+                      >
+                        {lot.name}
+                      </div>
+                      <div style={{ fontSize: 14, color: '#333' }}>
+                        {available}/{lot.total} spots available
+                      </div>
+                      <div style={{ fontSize: 12, color: '#777', marginTop: 2 }}>
+                        Last updated: {lastUpdated}
+                      </div>
+                    </div>
+                  </Popup>
                 </CircleMarker>
               );
             })}
           </MapContainer>
         </View>
 
-        {/* Search Bar */}
+        {/* 🔍 Search Bar + Filter Button */}
         <View style={styles.searchContainer}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="🔍 Find Lot"
-            value={search}
-            onChangeText={setSearch}
-          />
+          <View style={styles.searchRow}>
+            <TextInput
+              style={[styles.searchInput, { flex: 1 }]}
+              placeholder="🔍 Find Lot"
+              value={search}
+              onChangeText={setSearch}
+            />
+            <Text
+              style={styles.filterButton}
+              onPress={() => setShowFilters((prev) => !prev)}
+            >
+              ⚙️
+            </Text>
+          </View>
+
+          {showFilters && (
+            <View style={styles.filterMenu}>
+              <Text style={styles.filterLabel}>Permit Type:</Text>
+              <View style={styles.filterOptions}>
+                {['All', 'Red', 'Yellow', 'Garage'].map((permit) => (
+                  <Text
+                    key={permit}
+                    style={[
+                      styles.filterOption,
+                      selectedPermit === permit && styles.filterOptionSelected,
+                    ]}
+                    onPress={() => setSelectedPermit(permit)}
+                  >
+                    {permit}
+                  </Text>
+                ))}
+              </View>
+
+              <Text style={[styles.filterLabel, { marginTop: 6 }]}>Availability:</Text>
+              <View style={styles.filterOptions}>
+                {['Any', '> 20', '> 40', '> 60'].map((label) => (
+                  <Text
+                    key={label}
+                    style={[
+                      styles.filterOption,
+                      selectedAvailability === label && styles.filterOptionSelected,
+                    ]}
+                    onPress={() => setSelectedAvailability(label)}
+                  >
+                    {label}
+                  </Text>
+                ))}
+              </View>
+            </View>
+          )}
         </View>
       </View>
     );
@@ -169,7 +271,6 @@ export default function HomeScreen() {
         })}
       </MapView>
 
-      {/* Search Bar */}
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
@@ -202,4 +303,43 @@ const styles = StyleSheet.create({
     fontSize: 16,
     borderRadius: 20,
   },
+  searchRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+},
+filterButton: {
+  fontSize: 22,
+  marginHorizontal: 8,
+  color: '#007AFF',
+},
+filterMenu: {
+  backgroundColor: '#f8f8f8',
+  borderTopWidth: 1,
+  borderColor: '#ddd',
+  padding: 10,
+  borderBottomLeftRadius: 10,
+  borderBottomRightRadius: 10,
+},
+filterLabel: {
+  fontWeight: '600',
+  marginBottom: 4,
+},
+filterOptions: {
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  gap: 8,
+},
+filterOption: {
+  paddingVertical: 4,
+  paddingHorizontal: 10,
+  backgroundColor: '#eee',
+  borderRadius: 10,
+  fontSize: 14,
+},
+filterOptionSelected: {
+  backgroundColor: '#007AFF',
+  color: 'white',
+},
+
 });
