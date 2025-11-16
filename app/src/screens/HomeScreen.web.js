@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
+import specialEvents from "../data/specialEvents";
+
 import {
   View,
   TextInput,
@@ -30,7 +32,11 @@ export default function HomeScreen() {
   const [LeafletReady, setLeafletReady] = useState(false);
   const [LeafletModules, setLeafletModules] = useState(null);
   const router = useRouter();
+  
+  const [specialEventMessage, setSpecialEventMessage] = useState("");
 
+
+  
   const region = {
     latitude: 38.9543,
     longitude: -95.2558,
@@ -74,8 +80,19 @@ export default function HomeScreen() {
       </View>
     );
   };
+  useEffect(() => {
+    const today = new Date().toISOString().split("T")[0]; // "YYYY-MM-DD"
 
-  // 🌐 Load Leaflet dynamically
+    const event = specialEvents.find(e => e.date === today);
+
+    if (event) {
+      setSpecialEventMessage(event.message);
+    } else {
+      setSpecialEventMessage("");
+    }
+  }, []);
+
+  // Load Leaflet dynamically
   useEffect(() => {
     (async () => {
       const leaflet = await import('leaflet');
@@ -101,75 +118,101 @@ export default function HomeScreen() {
   const { MapContainer, TileLayer, CircleMarker, Popup } = LeafletModules;
 
   return (
-    <View style={styles.container}>
-      <View style={{ flex: 1 }}>
-        <MapContainer
-          center={[region.latitude, region.longitude]}
-          zoom={15}
-          style={{ height: height, width: width }}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
+  <View style={styles.container}>
 
-          {filteredLots.map((lot) => {
-            const { available, lastUpdated } = getLatestAvailability(lot);
-            return (
-              <CircleMarker
-                key={lot.id}
-                center={[lot.latitude, lot.longitude]}
-                radius={10}
-                fillColor="#ff3333"
-                color="#fff"
-                weight={2}
-                opacity={1}
-                fillOpacity={0.9}
-              >
-                <Popup>
-                  <div style={{ fontFamily: 'Arial, sans-serif', textAlign: 'center' }}>
-                    <div
-                      onClick={() =>
-                        router.push(`/StatsPage?lot=${encodeURIComponent(lot.name)}`)
-                      }
-                      style={{
-                        color: '#1E90FF',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        fontSize: 16,
-                        marginBottom: 4,
-                      }}
-                    >
-                      {lot.name}
-                    </div>
-                    <div style={{ fontSize: 14, color: '#333' }}>
-                      {available}/{lot.total} spots available
-                    </div>
-                    <div style={{ fontSize: 12, color: '#777', marginTop: 2 }}>
-                      Last updated: {lastUpdated}
-                    </div>
-                  </div>
-                </Popup>
-              </CircleMarker>
-            );
-          })}
-        </MapContainer>
+    {/* SPECIAL EVENT BANNER */}
+    {specialEventMessage !== "" && (
+      <View style={styles.banner}>
+        <Text style={styles.bannerText}>{specialEventMessage}</Text>
       </View>
+    )}
 
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="🔍 Find Lot"
-          value={search}
-          onChangeText={setSearch}
+    {/* MAP SECTION */}
+    <View style={{ flex: 1 }}>
+      <MapContainer
+        center={[region.latitude, region.longitude]}
+        zoom={15}
+        style={{ height: height, width: width }}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        {renderSuggestions()}
+
+        {filteredLots.map((lot) => {
+          const { available, lastUpdated } = getLatestAvailability(lot);
+          return (
+            <CircleMarker
+              key={lot.id}
+              center={[lot.latitude, lot.longitude]}
+              radius={10}
+              fillColor="#ff3333"
+              color="#fff"
+              weight={2}
+              opacity={1}
+              fillOpacity={0.9}
+            >
+              <Popup>
+                <div style={{ fontFamily: 'Arial, sans-serif', textAlign: 'center' }}>
+                  <div
+                    onClick={() =>
+                      router.push(`/StatsPage?lot=${encodeURIComponent(lot.name)}`)
+                    }
+                    style={{
+                      color: '#1E90FF',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      fontSize: 16,
+                      marginBottom: 4,
+                    }}
+                  >
+                    {lot.name}
+                  </div>
+                  <div style={{ fontSize: 14, color: '#333' }}>
+                    {available}/{lot.total} spots available
+                  </div>
+                  <div style={{ fontSize: 12, color: '#777', marginTop: 2 }}>
+                    Last updated: {lastUpdated}
+                  </div>
+                </div>
+              </Popup>
+            </CircleMarker>
+          );
+        })}
+      </MapContainer>
+    </View>
+
+    {/* 🔍 SEARCH BAR + SUGGESTIONS */}
+    <View style={styles.searchContainer}>
+      <TextInput
+        style={styles.searchInput}
+        placeholder="🔍 Find Lot"
+        value={search}
+        onChangeText={setSearch}
+      />
+
+      {/* Your original suggestion block — unchanged */}
+      <View style={styles.suggestions}>
+        {filteredLots.slice(0, 6).map((lot) => {
+          const { available } = getLatestAvailability(lot);
+          return (
+            <TouchableOpacity
+              key={lot.id}
+              style={styles.suggestionItem}
+              onPress={() => onSelectLot(lot)}
+            >
+              <Text style={styles.suggestionText}>
+                {lot.name} — {available}/{lot.total}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </View>
-  );
-}
 
+  </View>
+);
+}
 const styles = StyleSheet.create({
   container: { flex: 1 },
   searchContainer: {
@@ -209,4 +252,20 @@ const styles = StyleSheet.create({
     padding: 8,
     color: '#666',
   },
+  banner: {
+  width: "100%",
+  backgroundColor: "#ff4444",
+  paddingVertical: 10,
+  paddingHorizontal: 15,
+  justifyContent: "center",
+  alignItems: "center",
+  zIndex: 9999,
+  },
+  bannerText: {
+    color: "white",
+    fontWeight: "700",
+    fontSize: 16,
+    textAlign: "center",
+  },
+
 });
