@@ -1,18 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useFonts, Poppins_600SemiBold } from '@expo-google-fonts/poppins';
 import { Inter_400Regular, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import lots from '../src/data/mockParking';
-import { useRouter } from 'expo-router';
-//added imports
-import { BarChart } from 'react-native-chart-kit';
+import PopularTimes from '../components/popular-times';
+
 export default function StatsPage() {
   const { lot } = useLocalSearchParams();
   const lotData = lots.find((l) => l.name === lot);
   const router = useRouter();
-
-  const [lastUpdatedTime, setLastUpdatedTime] = useState(new Date());
 
   const [fontsLoaded] = useFonts({
     Poppins_600SemiBold,
@@ -20,80 +17,46 @@ export default function StatsPage() {
     Inter_600SemiBold,
   });
 
+  const [lastUpdatedTime, setLastUpdatedTime] = useState(new Date());
+
   if (!fontsLoaded) return null;
   if (!lotData) return <Text>Lot not found</Text>;
-
 
   const latest = lotData.dataPoints[lotData.dataPoints.length - 1];
   const occupied = latest.occupied;
   const percentFull = (occupied / lotData.total) * 100;
-  const lastUpdated = latest.time;
   const permitType = lotData.permit;
 
+  // Same idea as your second version: turn dataPoints into hourly percentages
+  const getHourlyData = () => {
+    const data = new Array(24).fill(0);
+    lotData.dataPoints.forEach((point) => {
+      const hour = parseInt(point.time.split(':')[0], 10);
+      const occupancyRate = (point.occupied / lotData.total) * 100;
+      data[hour] = occupancyRate;
+    });
+    return data;
+  };
 
-  // Dynamic bar color
+  const hourlyData = getHourlyData();
+
+  // Dynamic bar color for the main progress bar
   let barColor = '#9AE29B'; // green
   if (percentFull >= 70) barColor = '#FF9C9C'; // red
   else if (percentFull >= 40) barColor = '#FFE57E'; // yellow
 
-  // Generate hourly usage data from 6AM to 11PM
-  // Generate hourly usage data from 7AM to 6PM
-  const generateHourlyData = () => {
-    const hours = [];
-    const usage = [];
-    
-    for (let hour = 7; hour <= 18; hour++) {
-      hours.push(hour <= 12 ? `${hour}AM` : hour === 12 ? '12PM' : `${hour-12}PM`);
-      
-      // Find closest data point or estimate
-      const closest = lotData.dataPoints.reduce((prev, curr) => {
-        const prevHour = parseInt(prev.time.split(':')[0]);
-        const currHour = parseInt(curr.time.split(':')[0]);
-        return Math.abs(currHour - hour) < Math.abs(prevHour - hour) ? curr : prev;
-      });
-      
-      const percentage = (closest.occupied / lotData.total) * 100;
-      usage.push(percentage);
-    }
-    
-    return { hours, usage };
-  };
-
-  const { hours, usage } = generateHourlyData();
-
-  const chartConfig = {
-    backgroundColor: 'transparent',
-    backgroundGradientFrom: 'transparent',
-    backgroundGradientTo: 'transparent',
-    decimalPlaces: 0,
-    color: (opacity = 1, index) => {
-      const value = usage[index];
-      if (value >= 70) return `rgba(255, 156, 156, ${opacity})`; // red
-      if (value >= 40) return `rgba(255, 229, 126, ${opacity})`; // yellow
-      return `rgba(154, 226, 155, ${opacity})`; // green
-    },
-    labelColor: () => '#333',
-    style: { borderRadius: 16 },
-    propsForLabels: { 
-      fontSize: 10,
-      fontFamily: 'Inter_400Regular'
-    },
-    barPercentage: 0.8,
-    categoryPercentage: 0.9,
-  };
-
   const colors = {
-    Green: { bg: '#C8FACC', border: '#8DD493', text: '#2E7D32' },
-    Yellow: { bg: '#FFF7A3', border: '#E8D87A', text: '#A68B00' },
-    Red: { bg: '#FBC7C7', border: '#E89898', text: '#B11E1E' },
-    Garage: { bg: '#DDE1E7', border: '#B0B8C2', text: '#2E3A59' },
+    Green: { bg: '#C8FACC', border: '#8DD493' },
+    Yellow: { bg: '#FFF7A3', border: '#E8D87A' },
+    Red: { bg: '#FBC7C7', border: '#E89898' },
+    Garage: { bg: '#DDE1E7', border: '#B0B8C2' },
   };
 
-  const color = colors[permitType];
+  const color = colors[permitType] || colors.Garage;
 
   return (
     <ScrollView style={styles.container}>
-      {/* Home Button */}
+      {/* Home Button - same position as first design */}
       <View style={styles.homeButtonContainer}>
         <Text style={styles.homeButton} onPress={() => router.push('/')}>
           ← Back to Home
@@ -105,12 +68,16 @@ export default function StatsPage() {
 
       {/* Progress Bar */}
       <View style={styles.progressContainer}>
-        <View style={[styles.progressFill, { width: `${percentFull}%`, backgroundColor: barColor }]} />
+        <View
+          style={[
+            styles.progressFill,
+            { width: `${percentFull}%`, backgroundColor: barColor },
+          ]}
+        />
       </View>
 
-      {/*Top section */}
+      {/* Top section: left (occupancy + permit), right (last updated + refresh) */}
       <View style={styles.topRowContainer}>
-
         {/* LEFT SIDE */}
         <View style={styles.leftColumn}>
           <Text style={styles.infoText}>
@@ -123,6 +90,7 @@ export default function StatsPage() {
               { backgroundColor: color.bg, borderColor: color.border },
             ]}
           >
+            {/* Permit text kept BLACK */}
             <Text style={styles.permitText}>{permitType} Permit</Text>
           </View>
         </View>
@@ -140,74 +108,14 @@ export default function StatsPage() {
             ↻ Refresh
           </Text>
         </View>
-
       </View>
 
-      {/* Busy Hours Chart */}
+      {/* Busy Hours Chart using PopularTimes component */}
       <View style={styles.chartContainer}>
         <Text style={styles.chartTitle}>Busy Hours</Text>
-        {/* Custom Bar Chart */}
-        <View style={styles.customChart}>
-          {/* Y-axis labels */}
-          <View style={styles.yAxisContainer}>
-            <Text style={styles.yAxisLabel}>{lotData.total}</Text>
-            <Text style={styles.yAxisLabel}>{Math.round(lotData.total * 0.75)}</Text>
-            <Text style={styles.yAxisLabel}>{Math.round(lotData.total * 0.5)}</Text>
-            <Text style={styles.yAxisLabel}>{Math.round(lotData.total * 0.25)}</Text>
-            <Text style={styles.yAxisLabel}>0</Text>
-          </View>
-          
-          <View style={styles.chartArea}>
-            {/* Y-axis line */}
-            <View style={styles.yAxisLine} />
-            
-            <View style={styles.barsContainer}>
-              {usage.map((value, index) => {
-                const actualValue = (value / 100) * lotData.total;
-                const barHeight = (actualValue / lotData.total) * 180; // Max height 180px
-                let barColor = '#9AE29B'; // green
-                if (value >= 70) barColor = '#FF9C9C'; // red
-                else if (value >= 40) barColor = '#FFE57E'; // yellow
-                
-                return (
-                  <View key={index} style={styles.barWrapper}>
-                    <View 
-                      style={[
-                        styles.bar, 
-                        { 
-                          height: barHeight, 
-                          backgroundColor: barColor 
-                        }
-                      ]} 
-                    />
-                    <Text style={styles.barLabel}>{hours[index]}</Text>
-                  </View>
-                );
-              })}
-            </View>
-            
-            {/* X-axis line */}
-            <View style={styles.xAxisLine} />
-          </View>
-        </View>
-        {/*
-        <View style={styles.legend}>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendColor, { backgroundColor: '#9AE29B' }]} />
-            <Text style={styles.legendText}>Light</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendColor, { backgroundColor: '#FFE57E' }]} />
-            <Text style={styles.legendText}>Moderate</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendColor, { backgroundColor: '#FF9C9C' }]} />
-            <Text style={styles.legendText}>Heavy</Text>
-          </View>
-        </View>
-        */}
+        <PopularTimes data={getHourlyData()} maxCapacity={lotData.total} />
       </View>
-      </ScrollView>
+    </ScrollView>
   );
 }
 
@@ -238,12 +146,6 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 12,
   },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginTop: 8,
-  },
   infoText: {
     fontSize: 15,
     fontFamily: 'Inter_400Regular',
@@ -259,19 +161,20 @@ const styles = StyleSheet.create({
   permitText: {
     fontSize: 16,
     fontFamily: 'Inter_600SemiBold',
+    color: '#000', // explicitly black
   },
   homeButtonContainer: {
-  position: 'absolute',
-  top: 30,
-  right: 20,
-  zIndex: 10,
+    position: 'absolute',
+    top: 30,   // same as your first design
+    right: 20, // same as your first design
+    zIndex: 10,
   },
   topRowContainer: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'flex-start',
-  width: '100%',
-  marginTop: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    width: '100%',
+    marginTop: 12,
   },
   leftColumn: {
     flexDirection: 'column',
@@ -311,7 +214,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     minWidth: 100,
   },
-
   chartContainer: {
     marginTop: 30,
     marginBottom: 40,
@@ -322,93 +224,4 @@ const styles = StyleSheet.create({
     color: '#222',
     marginBottom: 15,
   },
-  chart: {
-    borderRadius: 16,
-  },
-  customChart: {
-    height: 220,
-    flexDirection: 'row',
-    paddingBottom: 30,
-  },
-  yAxisContainer: {
-    justifyContent: 'space-between',
-    height: 180,
-    paddingRight: 10,
-    paddingTop: 0,
-  },
-  yAxisLabel: {
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-    color: '#333',
-    textAlign: 'right',
-  },
-  chartArea: {
-    flex: 1,
-    position: 'relative',
-  },
-  yAxisLine: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    width: 1,
-    height: 180,
-    backgroundColor: '#ddd',
-  },
-  xAxisLine: {
-    position: 'absolute',
-    bottom: 10,
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: '#ddd',
-  },
-  barsContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    height: 200,
-    paddingHorizontal: 10,
-    paddingLeft: 15,
-  },
-  barWrapper: {
-    alignItems: 'center',
-    flex: 1,
-    marginTop: 20,
-  },
-  bar: {
-    width: 30,
-    borderRadius: 2,
-    marginBottom: 0,
-  },
-  barLabel: {
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-    color: '#333',
-    textAlign: 'center',
-    marginTop: 5,
-  },
-  legend: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 15,
-    gap: 20,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  legendColor: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  legendText: {
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-    color: '#333',
-  },
-
-
-
 });

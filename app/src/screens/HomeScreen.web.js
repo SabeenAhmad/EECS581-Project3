@@ -8,20 +8,19 @@ import {
   Text,
   TouchableOpacity,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import lots from '../data/mockParking';
 import 'leaflet/dist/leaflet.css';
 
 const { width, height } = Dimensions.get('window');
 
-// Helper: get most recent datapoint for each lot
 function getLatestAvailability(lot) {
   const latest = lot.dataPoints[lot.dataPoints.length - 1];
   const available = lot.total - latest.occupied;
-  const occupied = latest.occupied;
   return {
     available,
     lastUpdated: latest.time,
-    occupied,
+    occupied: latest.occupied,
   };
 }
 
@@ -47,6 +46,7 @@ export default function HomeScreen() {
 
   const renderSuggestions = () => {
     if (!search.trim()) return null;
+
     if (filteredLots.length === 0) {
       return (
         <View style={styles.suggestions}>
@@ -75,7 +75,6 @@ export default function HomeScreen() {
     );
   };
 
-  // 🌐 Load Leaflet dynamically
   useEffect(() => {
     (async () => {
       const leaflet = await import('leaflet');
@@ -87,12 +86,7 @@ export default function HomeScreen() {
 
   if (!LeafletReady || !LeafletModules) {
     return (
-      <View
-        style={[
-          styles.container,
-          { justifyContent: 'center', alignItems: 'center' },
-        ]}
-      >
+      <View style={[styles.container, styles.centered]}>
         <Text>Loading map...</Text>
       </View>
     );
@@ -115,6 +109,7 @@ export default function HomeScreen() {
 
           {filteredLots.map((lot) => {
             const { available, lastUpdated } = getLatestAvailability(lot);
+
             return (
               <CircleMarker
                 key={lot.id}
@@ -127,7 +122,7 @@ export default function HomeScreen() {
                 fillOpacity={0.9}
               >
                 <Popup>
-                  <div style={{ fontFamily: 'Arial, sans-serif', textAlign: 'center' }}>
+                  <div style={{ fontFamily: 'Arial', textAlign: 'center' }}>
                     <div
                       onClick={() =>
                         router.push(`/StatsPage?lot=${encodeURIComponent(lot.name)}`)
@@ -156,14 +151,27 @@ export default function HomeScreen() {
         </MapContainer>
       </View>
 
-      {/* Search Bar */}
+      {/* 🔘 Calendar Button */}
+      <TouchableOpacity
+        style={styles.calendarButton}
+        onPress={() => router.push('/calendar')}
+      >
+        <Feather name="calendar" size={24} color="#fff" />
+      </TouchableOpacity>
+
+      {/* 🔍 Search Bar */}
       <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="🔍 Find Lot"
-          value={search}
-          onChangeText={setSearch}
-        />
+        <View style={styles.searchRow}>
+          <Feather name="search" size={20} color="#777" style={{ marginHorizontal: 10 }} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Find Lot"
+            placeholderTextColor="#777"
+            value={search}
+            onChangeText={setSearch}
+          />
+        </View>
+
         {renderSuggestions()}
       </View>
     </View>
@@ -171,12 +179,40 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: {
+    flex: 1,
+    backgroundColor: '#ffffff', // <-- WHITE BACKGROUND
+  },
+  centered: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  /** 🔘 Floating calendar button */
+  calendarButton: {
+    position: 'absolute',
+    bottom: 120,
+    left: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#222', // same design language
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 6,
+    zIndex: 20,
+  },
+
+  /** 🔍 Search bar */
   searchContainer: {
     position: 'absolute',
     bottom: 40,
     alignSelf: 'center',
-    backgroundColor: 'white',
+    backgroundColor: '#fff',
     width: '90%',
     borderRadius: 20,
     shadowColor: '#000',
@@ -184,11 +220,20 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
-  searchInput: {
-    padding: 12,
-    fontSize: 16,
-    borderRadius: 20,
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
   },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingRight: 12,
+    fontSize: 16,
+    color: '#333',
+  },
+
+  /** Suggestions */
   suggestions: {
     maxHeight: 220,
     marginTop: 8,
