@@ -108,30 +108,41 @@ export default function StatsPage() {
         <View style={[styles.progressFill, { width: `${percentFull}%`, backgroundColor: barColor }]} />
       </View>
 
-      {/* Info Row */}
-      <View style={styles.infoRow}>
-        <Text style={styles.infoText}>
-          {occupied}/{lotData.total} spots taken
-        </Text>
-        <Text style={styles.infoText}>Last updated: {lastUpdatedTime.toLocaleTimeString()}</Text>
-      </View>
-      
-      {/* Refresh Button */}
-      <View style={styles.refreshContainer}>
-        <Text style={styles.refreshButton} onPress={() => setLastUpdatedTime(new Date())}>
-          ↻ Refresh
-        </Text>
+      {/*Top section */}
+      <View style={styles.topRowContainer}>
+
+        {/* LEFT SIDE */}
+        <View style={styles.leftColumn}>
+          <Text style={styles.infoText}>
+            {occupied}/{lotData.total} spots taken
+          </Text>
+
+          <View
+            style={[
+              styles.permitTag,
+              { backgroundColor: color.bg, borderColor: color.border },
+            ]}
+          >
+            <Text style={styles.permitText}>{permitType} Permit</Text>
+          </View>
+        </View>
+
+        {/* RIGHT SIDE */}
+        <View style={styles.rightColumn}>
+          <Text style={styles.infoText}>
+            Last updated: {lastUpdatedTime.toLocaleTimeString()}
+          </Text>
+
+          <Text
+            style={styles.refreshButton}
+            onPress={() => setLastUpdatedTime(new Date())}
+          >
+            ↻ Refresh
+          </Text>
+        </View>
+
       </View>
 
-      {/* Permit Tag */}
-      <View
-        style={[
-          styles.permitTag,
-          { backgroundColor: color.bg, borderColor: color.border },
-        ]}
-      >
-        <Text style={styles.permitText}>{permitType} Permit</Text>
-      </View>
       {/* Busy Hours Chart */}
       <View style={styles.chartContainer}>
         <Text style={styles.chartTitle}>Busy Hours</Text>
@@ -239,12 +250,11 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   permitTag: {
-    alignSelf: 'flex-start',
     borderWidth: 1.5,
     borderRadius: 10,
     paddingVertical: 6,
     paddingHorizontal: 14,
-    marginTop: 25,
+    marginTop: 10,
   },
   permitText: {
     fontSize: 16,
@@ -255,6 +265,23 @@ const styles = StyleSheet.create({
   top: 30,
   right: 20,
   zIndex: 10,
+  },
+  topRowContainer: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'flex-start',
+  width: '100%',
+  marginTop: 12,
+  },
+  leftColumn: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  rightColumn: {
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    gap: 10,
   },
   homeButton: {
     fontFamily: 'Inter_600SemiBold',
@@ -269,13 +296,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  refreshContainer: {
-  marginTop: 18,
-  alignSelf: 'flex-start',
-  },
   refreshButton: {
     fontFamily: 'Inter_600SemiBold',
-    backgroundColor: '#4A90E2',
+    backgroundColor: '#0073e6',
     color: 'white',
     paddingVertical: 8,
     paddingHorizontal: 16,
@@ -285,6 +308,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 3,
     elevation: 2,
+    textAlign: 'center',
+    minWidth: 100,
   },
 
   chartContainer: {
