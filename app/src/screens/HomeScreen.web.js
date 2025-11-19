@@ -7,7 +7,10 @@ import {
   Dimensions,
   Text,
   TouchableOpacity,
+  Modal,
+  Alert,
 } from 'react-native';
+import { useFonts, Inter_600SemiBold, Inter_400Regular } from '@expo-google-fonts/inter';
 import lots from '../data/mockParking';
 import 'leaflet/dist/leaflet.css';
 
@@ -29,7 +32,14 @@ export default function HomeScreen() {
   const [search, setSearch] = useState('');
   const [LeafletReady, setLeafletReady] = useState(false);
   const [LeafletModules, setLeafletModules] = useState(null);
+  const [feedbackVisible, setFeedbackVisible] = useState(false);
+  const [feedbackText, setFeedbackText] = useState('');
   const router = useRouter();
+  
+  const [fontsLoaded] = useFonts({
+    Inter_600SemiBold,
+    Inter_400Regular,
+  });
 
   const region = {
     latitude: 38.9543,
@@ -43,6 +53,21 @@ export default function HomeScreen() {
   const onSelectLot = (lot) => {
     setSearch(lot.name);
     router.push(`/StatsPage?lot=${encodeURIComponent(lot.name)}`);
+  };
+
+  const saveFeedback = () => {
+    if (!feedbackText.trim()) {
+      Alert.alert('Please enter your feedback');
+      return;
+    }
+    const feedback = {
+      message: feedbackText,
+      timestamp: new Date().toISOString(),
+    };
+    console.log('Feedback submitted:', feedback);
+    Alert.alert('Thank you!', 'Your feedback has been submitted.');
+    setFeedbackVisible(false);
+    setFeedbackText('');
   };
 
   const renderSuggestions = () => {
@@ -85,7 +110,7 @@ export default function HomeScreen() {
     })();
   }, []);
 
-  if (!LeafletReady || !LeafletModules) {
+  if (!LeafletReady || !LeafletModules || !fontsLoaded) {
     return (
       <View
         style={[
@@ -156,7 +181,13 @@ export default function HomeScreen() {
         </MapContainer>
       </View>
 
-      {/* Search Bar */}
+      <TouchableOpacity
+        style={styles.feedbackButton}
+        onPress={() => setFeedbackVisible(true)}
+      >
+        <Text style={styles.feedbackButtonText}>Feedback</Text>
+      </TouchableOpacity>
+
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
@@ -166,6 +197,41 @@ export default function HomeScreen() {
         />
         {renderSuggestions()}
       </View>
+
+      <Modal
+        visible={feedbackVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setFeedbackVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Send Feedback</Text>
+            <TextInput
+              style={styles.feedbackInput}
+              placeholder="Tell us what you think..."
+              value={feedbackText}
+              onChangeText={setFeedbackText}
+              multiline
+              numberOfLines={4}
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setFeedbackVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.submitButton}
+                onPress={saveFeedback}
+              >
+                <Text style={styles.submitButtonText}>Send</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -208,5 +274,85 @@ const styles = StyleSheet.create({
   noResults: {
     padding: 8,
     color: '#666',
+  },
+  feedbackButton: {
+    position: 'absolute',
+    top: 90,
+    left: 5,
+    backgroundColor: '#222',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  feedbackButtonText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+    color: '#fff',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    margin: 20,
+    borderRadius: 15,
+    padding: 20,
+    width: '90%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter_600SemiBold',
+    textAlign: 'center',
+    marginBottom: 15,
+    color: '#222',
+  },
+  feedbackInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    fontFamily: 'Inter_400Regular',
+    textAlignVertical: 'top',
+    marginBottom: 15,
+    minHeight: 80,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#f0f0f0',
+    padding: 12,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  cancelButtonText: {
+    textAlign: 'center',
+    fontSize: 15,
+    fontFamily: 'Inter_600SemiBold',
+    color: '#666',
+  },
+  submitButton: {
+    flex: 1,
+    backgroundColor: '#222',
+    padding: 12,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  submitButtonText: {
+    textAlign: 'center',
+    fontSize: 15,
+    fontFamily: 'Inter_600SemiBold',
+    color: 'white',
   },
 });
