@@ -1,6 +1,3 @@
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-// Load firebase config from environment or from a local env/firebase-config.json (not checked into git)
 let firebaseConfig = {};
 try {
   // Prefer explicit EXPO_PUBLIC_* env vars (secure for publishing)
@@ -15,7 +12,6 @@ try {
       measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENTID
     };
   } else {
-    // Fallback: try reading local env JSON (this file is gitignored by the changes below)
     try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const cfg = require('../../env/firebase-config.json');

@@ -128,7 +128,6 @@ async function updateLotMeta(lotId, updates) {
 }
 
 async function deleteLot(lotId) {
-  // Caution: this will delete the lot document and ALL subcollections (not recursively by Firestore SDK) — implement safe deletion for events in this tool
   const ref = db.collection('lots').doc(lotId);
   const events = await ref.collection('events').listDocuments();
   for (const d of events) await d.delete();
