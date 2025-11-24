@@ -35,8 +35,9 @@ export default function HomeScreen() {
     longitude: -95.2558,
   };
 
+  // Use prefix matching so results must start with the typed letters (case-insensitive)
   const filteredLots = lots.filter((lot) =>
-    lot.name.toLowerCase().includes(search.toLowerCase())
+    lot.name.toLowerCase().startsWith(search.trim().toLowerCase())
   );
 
   const onSelectLot = (lot) => {
@@ -231,6 +232,10 @@ const styles = StyleSheet.create({
     paddingRight: 12,
     fontSize: 16,
     color: '#333',
+    outlineWidth: 0,
+    outlineColor: 'transparent',
+    outlineStyle: 'none',
+    boxShadow: 'none',
   },
 
   /** Suggestions */
