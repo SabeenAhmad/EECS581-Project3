@@ -16,12 +16,24 @@ import 'leaflet/dist/leaflet.css';
 
 const { width, height } = Dimensions.get('window');
 
+function convertTo12Hour(time24) {
+  // Example input: "17:34"
+  const [hourStr, minute] = time24.split(":");
+  let hour = parseInt(hourStr, 10);
+  const ampm = hour >= 12 ? "PM" : "AM";
+
+  hour = hour % 12;
+  if (hour === 0) hour = 12; // 0 -> 12
+
+  return `${hour}:${minute} ${ampm}`;
+}
+
 function getLatestAvailability(lot) {
   const latest = lot.dataPoints[lot.dataPoints.length - 1];
   const available = lot.total - latest.occupied;
   return {
     available,
-    lastUpdated: latest.time,
+    lastUpdated: convertTo12Hour(latest.time),
     occupied: latest.occupied,
   };
 }
