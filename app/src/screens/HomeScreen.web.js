@@ -34,6 +34,7 @@ export default function HomeScreen() {
   const [LeafletModules, setLeafletModules] = useState(null);
   const [feedbackVisible, setFeedbackVisible] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
+  const [rating, setRating] = useState(0);
   const router = useRouter();
   
   const [fontsLoaded] = useFonts({
@@ -56,18 +57,20 @@ export default function HomeScreen() {
   };
 
   const saveFeedback = () => {
-    if (!feedbackText.trim()) {
-      Alert.alert('Please enter your feedback');
+    if (!feedbackText.trim() && rating === 0) {
+      Alert.alert('Please provide a rating or feedback');
       return;
     }
     const feedback = {
       message: feedbackText,
+      rating: rating,
       timestamp: new Date().toISOString(),
     };
     console.log('Feedback submitted:', feedback);
     Alert.alert('Thank you!', 'Your feedback has been submitted.');
     setFeedbackVisible(false);
     setFeedbackText('');
+    setRating(0);
   };
 
   const renderSuggestions = () => {
@@ -207,6 +210,22 @@ export default function HomeScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Send Feedback</Text>
+            <View style={styles.ratingContainer}>
+              <Text style={styles.ratingLabel}>Rate your experience:</Text>
+              <View style={styles.starsContainer}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <TouchableOpacity
+                    key={star}
+                    onPress={() => setRating(star)}
+                    style={styles.starButton}
+                  >
+                    <Text style={[styles.star, rating >= star && styles.starFilled]}>
+                      ★
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
             <TextInput
               style={styles.feedbackInput}
               placeholder="Tell us what you think..."
@@ -218,15 +237,19 @@ export default function HomeScreen() {
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={styles.cancelButton}
-                onPress={() => setFeedbackVisible(false)}
+                onPress={() => {
+                  setFeedbackVisible(false);
+                  setRating(0);
+                }}
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.submitButton}
-                onPress={saveFeedback}
+                style={[styles.submitButton, (!feedbackText.trim() && rating === 0) && styles.submitButtonDisabled]}
+                onPress={(!feedbackText.trim() && rating === 0) ? null : saveFeedback}
+                disabled={!feedbackText.trim() && rating === 0}
               >
-                <Text style={styles.submitButtonText}>Send</Text>
+                <Text style={[styles.submitButtonText, (!feedbackText.trim() && rating === 0) && styles.submitButtonTextDisabled]}>Send</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -354,5 +377,34 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'Inter_600SemiBold',
     color: 'white',
+  },
+  ratingContainer: {
+    marginBottom: 15,
+  },
+  ratingLabel: {
+    fontSize: 16,
+    fontFamily: 'Inter_600SemiBold',
+    color: '#222',
+    marginBottom: 8,
+  },
+  starsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  starButton: {
+    padding: 5,
+  },
+  star: {
+    fontSize: 30,
+    color: '#ddd',
+  },
+  starFilled: {
+    color: '#FFD700',
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#ccc',
+  },
+  submitButtonTextDisabled: {
+    color: '#999',
   },
 });
