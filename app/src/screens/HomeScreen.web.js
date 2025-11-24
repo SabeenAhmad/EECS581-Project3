@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
-import specialEvents from "../data/specialEvents";
+import { parkingEvents } from "../data/parkingEvents";
 
 import {
   View,
@@ -10,20 +10,19 @@ import {
   Text,
   TouchableOpacity,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import lots from '../data/mockParking';
 import 'leaflet/dist/leaflet.css';
 
 const { width, height } = Dimensions.get('window');
 
-// Helper: get most recent datapoint for each lot
 function getLatestAvailability(lot) {
   const latest = lot.dataPoints[lot.dataPoints.length - 1];
   const available = lot.total - latest.occupied;
-  const occupied = latest.occupied;
   return {
     available,
     lastUpdated: latest.time,
-    occupied,
+    occupied: latest.occupied,
   };
 }
 
@@ -42,8 +41,9 @@ export default function HomeScreen() {
     longitude: -95.2558,
   };
 
+  // Use prefix matching so results must start with the typed letters (case-insensitive)
   const filteredLots = lots.filter((lot) =>
-    lot.name.toLowerCase().includes(search.toLowerCase())
+    lot.name.toLowerCase().startsWith(search.trim().toLowerCase())
   );
 
   const onSelectLot = (lot) => {
@@ -53,6 +53,7 @@ export default function HomeScreen() {
 
   const renderSuggestions = () => {
     if (!search.trim()) return null;
+
     if (filteredLots.length === 0) {
       return (
         <View style={styles.suggestions}>
@@ -80,17 +81,31 @@ export default function HomeScreen() {
       </View>
     );
   };
-  useEffect(() => {
-    const today = new Date().toISOString().split("T")[0]; // "YYYY-MM-DD"
+    useEffect(() => {
+      const today = new Date().toISOString().split("T")[0];
 
-    const event = specialEvents.find(e => e.date === today);
+      // Find events happening today
+      const todayEvents = parkingEvents.filter(e => e.date === today);
 
-    if (event) {
-      setSpecialEventMessage(event.message);
-    } else {
-      setSpecialEventMessage("");
-    }
-  }, []);
+      if (todayEvents.length === 0) {
+        setSpecialEventMessage("");
+        return;
+      }
+
+      // Build a message from all events today
+      const builtMessage = todayEvents
+        .map(event => {
+          const emoji =
+            event.impactLevel === "High" ? "🚨" :
+            event.impactLevel === "Medium" ? "⚠️" : "ℹ️";
+
+          return `${emoji} ${event.title} — ${event.time}`;
+        })
+        .join("\n");
+
+      setSpecialEventMessage(builtMessage);
+    }, []);
+
 
   // Load Leaflet dynamically
   useEffect(() => {
@@ -104,12 +119,7 @@ export default function HomeScreen() {
 
   if (!LeafletReady || !LeafletModules) {
     return (
-      <View
-        style={[
-          styles.container,
-          { justifyContent: 'center', alignItems: 'center' },
-        ]}
-      >
+      <View style={[styles.container, styles.centered]}>
         <Text>Loading map...</Text>
       </View>
     );
@@ -141,6 +151,7 @@ export default function HomeScreen() {
 
         {filteredLots.map((lot) => {
           const { available, lastUpdated } = getLatestAvailability(lot);
+
           return (
             <CircleMarker
               key={lot.id}
@@ -153,7 +164,7 @@ export default function HomeScreen() {
               fillOpacity={0.9}
             >
               <Popup>
-                <div style={{ fontFamily: 'Arial, sans-serif', textAlign: 'center' }}>
+                <div style={{ fontFamily: 'Arial', textAlign: 'center' }}>
                   <div
                     onClick={() =>
                       router.push(`/StatsPage?lot=${encodeURIComponent(lot.name)}`)
@@ -182,44 +193,68 @@ export default function HomeScreen() {
       </MapContainer>
     </View>
 
-    {/* 🔍 SEARCH BAR + SUGGESTIONS */}
-    <View style={styles.searchContainer}>
-      <TextInput
-        style={styles.searchInput}
-        placeholder="🔍 Find Lot"
-        value={search}
-        onChangeText={setSearch}
-      />
+      {/* 🔘 Calendar Button */}
+      <TouchableOpacity
+        style={styles.calendarButton}
+        onPress={() => router.push('/calendar')}
+      >
+        <Feather name="calendar" size={24} color="#fff" />
+      </TouchableOpacity>
 
-      {/* Your original suggestion block — unchanged */}
-      <View style={styles.suggestions}>
-        {filteredLots.slice(0, 6).map((lot) => {
-          const { available } = getLatestAvailability(lot);
-          return (
-            <TouchableOpacity
-              key={lot.id}
-              style={styles.suggestionItem}
-              onPress={() => onSelectLot(lot)}
-            >
-              <Text style={styles.suggestionText}>
-                {lot.name} — {available}/{lot.total}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+      {/* 🔍 Search Bar */}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchRow}>
+          <Feather name="search" size={20} color="#777" style={{ marginHorizontal: 10 }} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Find Lot"
+            placeholderTextColor="#777"
+            value={search}
+            onChangeText={setSearch}
+          />
+        </View>
+
+        {renderSuggestions()}
       </View>
     </View>
 
-  </View>
 );
 }
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: {
+    flex: 1,
+    backgroundColor: '#ffffff', // <-- WHITE BACKGROUND
+  },
+  centered: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  /** 🔘 Floating calendar button */
+  calendarButton: {
+    position: 'absolute',
+    bottom: 120,
+    left: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#222', // same design language
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 6,
+    zIndex: 20,
+  },
+
+  /** 🔍 Search bar */
   searchContainer: {
     position: 'absolute',
     bottom: 40,
     alignSelf: 'center',
-    backgroundColor: 'white',
+    backgroundColor: '#fff',
     width: '90%',
     borderRadius: 20,
     shadowColor: '#000',
@@ -227,11 +262,24 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
-  searchInput: {
-    padding: 12,
-    fontSize: 16,
-    borderRadius: 20,
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
   },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingRight: 12,
+    fontSize: 16,
+    color: '#333',
+    outlineWidth: 0,
+    outlineColor: 'transparent',
+    outlineStyle: 'none',
+    boxShadow: 'none',
+  },
+
+  /** Suggestions */
   suggestions: {
     maxHeight: 220,
     marginTop: 8,

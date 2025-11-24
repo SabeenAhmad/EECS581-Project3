@@ -32,6 +32,10 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
+
+# Local secrets folder (do not commit service account keys or firebase config)
+/env/
 
 # typescript
 *.tsbuildinfo

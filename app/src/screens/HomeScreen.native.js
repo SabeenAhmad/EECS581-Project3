@@ -46,7 +46,7 @@ export default function HomeScreen() {
   };
 
   const filteredLots = lots.filter((lot) =>
-    lot.name.toLowerCase().includes(search.toLowerCase())
+    lot.name.toLowerCase().startsWith(search.trim().toLowerCase())
   );
 
   const onSelectLot = (lot) => {
