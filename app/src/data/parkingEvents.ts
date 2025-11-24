@@ -19,6 +19,17 @@ export interface ParkingEvent {
 // Mock data 
 export const parkingEvents: ParkingEvent[] = [
   {
+    id: 'campus-2025-11-24',
+    title: 'KU Research Symposium',
+    type: 'Campus Event',
+    date: '2025-11-24',
+    time: '10:00 AM – 3:00 PM',
+    venue: 'Kansas Union Ballroom',
+    lotsAffected: ['Mississippi Street Garage', 'Allen Fieldhouse Lot'],
+    impactLevel: 'Medium',
+    notes: 'Expect heavier foot traffic around the Union; parking may fill up before noon.',
+  },
+  {
     id: 'fb-2025-09-06',
     title: 'KU vs Kansas State (Football)',
     type: 'Football',
