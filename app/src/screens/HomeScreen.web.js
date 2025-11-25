@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
+import { parkingEvents } from "../data/parkingEvents";
+
 import {
   View,
   TextInput,
@@ -10,21 +12,32 @@ import {
   Modal,
   Alert,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { useFonts, Inter_600SemiBold, Inter_400Regular } from '@expo-google-fonts/inter';
 import lots from '../data/mockParking';
 import 'leaflet/dist/leaflet.css';
 
 const { width, height } = Dimensions.get('window');
 
-// Helper: get most recent datapoint for each lot
+function convertTo12Hour(time24) {
+  // Example input: "17:34"
+  const [hourStr, minute] = time24.split(":");
+  let hour = parseInt(hourStr, 10);
+  const ampm = hour >= 12 ? "PM" : "AM";
+
+  hour = hour % 12;
+  if (hour === 0) hour = 12; // 0 -> 12
+
+  return `${hour}:${minute} ${ampm}`;
+}
+
 function getLatestAvailability(lot) {
   const latest = lot.dataPoints[lot.dataPoints.length - 1];
   const available = lot.total - latest.occupied;
-  const occupied = latest.occupied;
   return {
     available,
-    lastUpdated: latest.time,
-    occupied,
+    lastUpdated: convertTo12Hour(latest.time),
+    occupied: latest.occupied,
   };
 }
 
@@ -41,14 +54,19 @@ export default function HomeScreen() {
     Inter_600SemiBold,
     Inter_400Regular,
   });
+  
+  const [specialEventMessage, setSpecialEventMessage] = useState("");
 
+
+  
   const region = {
     latitude: 38.9543,
     longitude: -95.2558,
   };
 
+  // Use prefix matching so results must start with the typed letters (case-insensitive)
   const filteredLots = lots.filter((lot) =>
-    lot.name.toLowerCase().includes(search.toLowerCase())
+    lot.name.toLowerCase().startsWith(search.trim().toLowerCase())
   );
 
   const onSelectLot = (lot) => {
@@ -75,6 +93,7 @@ export default function HomeScreen() {
 
   const renderSuggestions = () => {
     if (!search.trim()) return null;
+
     if (filteredLots.length === 0) {
       return (
         <View style={styles.suggestions}>
@@ -102,8 +121,33 @@ export default function HomeScreen() {
       </View>
     );
   };
+    useEffect(() => {
+      const today = new Date().toISOString().split("T")[0];
 
-  // 🌐 Load Leaflet dynamically
+      // Find events happening today
+      const todayEvents = parkingEvents.filter(e => e.date === today);
+
+      if (todayEvents.length === 0) {
+        setSpecialEventMessage("");
+        return;
+      }
+
+      // Build a message from all events today
+      const builtMessage = todayEvents
+        .map(event => {
+          const emoji =
+            event.impactLevel === "High" ? "🚨" :
+            event.impactLevel === "Medium" ? "⚠️" : "ℹ️";
+
+          return `${emoji} ${event.title} — ${event.time}`;
+        })
+        .join("\n");
+
+      setSpecialEventMessage(builtMessage);
+    }, []);
+
+
+  // Load Leaflet dynamically
   useEffect(() => {
     (async () => {
       const leaflet = await import('leaflet');
@@ -115,12 +159,7 @@ export default function HomeScreen() {
 
   if (!LeafletReady || !LeafletModules || !fontsLoaded) {
     return (
-      <View
-        style={[
-          styles.container,
-          { justifyContent: 'center', alignItems: 'center' },
-        ]}
-      >
+      <View style={[styles.container, styles.centered]}>
         <Text>Loading map...</Text>
       </View>
     );
@@ -129,75 +168,100 @@ export default function HomeScreen() {
   const { MapContainer, TileLayer, CircleMarker, Popup } = LeafletModules;
 
   return (
-    <View style={styles.container}>
-      <View style={{ flex: 1 }}>
-        <MapContainer
-          center={[region.latitude, region.longitude]}
-          zoom={15}
-          style={{ height: height, width: width }}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
+  <View style={styles.container}>
 
-          {filteredLots.map((lot) => {
-            const { available, lastUpdated } = getLatestAvailability(lot);
-            return (
-              <CircleMarker
-                key={lot.id}
-                center={[lot.latitude, lot.longitude]}
-                radius={10}
-                fillColor="#ff3333"
-                color="#fff"
-                weight={2}
-                opacity={1}
-                fillOpacity={0.9}
-              >
-                <Popup>
-                  <div style={{ fontFamily: 'Arial, sans-serif', textAlign: 'center' }}>
-                    <div
-                      onClick={() =>
-                        router.push(`/StatsPage?lot=${encodeURIComponent(lot.name)}`)
-                      }
-                      style={{
-                        color: '#1E90FF',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        fontSize: 16,
-                        marginBottom: 4,
-                      }}
-                    >
-                      {lot.name}
-                    </div>
-                    <div style={{ fontSize: 14, color: '#333' }}>
-                      {available}/{lot.total} spots available
-                    </div>
-                    <div style={{ fontSize: 12, color: '#777', marginTop: 2 }}>
-                      Last updated: {lastUpdated}
-                    </div>
-                  </div>
-                </Popup>
-              </CircleMarker>
-            );
-          })}
-        </MapContainer>
+    {/* SPECIAL EVENT BANNER */}
+    {specialEventMessage !== "" && (
+      <View style={styles.banner}>
+        <Text style={styles.bannerText}>{specialEventMessage}</Text>
       </View>
+    )}
 
-      <TouchableOpacity
-        style={styles.feedbackButton}
-        onPress={() => setFeedbackVisible(true)}
+    {/* MAP SECTION */}
+    <View style={{ flex: 1 }}>
+      <MapContainer
+        center={[region.latitude, region.longitude]}
+        zoom={15}
+        style={{ height: height, width: width }}
       >
-        <Text style={styles.feedbackButtonText}>Feedback</Text>
-      </TouchableOpacity>
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+
+        {filteredLots.map((lot) => {
+          const { available, lastUpdated } = getLatestAvailability(lot);
+
+          return (
+            <CircleMarker
+              key={lot.id}
+              center={[lot.latitude, lot.longitude]}
+              radius={10}
+              fillColor="#ff3333"
+              color="#fff"
+              weight={2}
+              opacity={1}
+              fillOpacity={0.9}
+            >
+              <Popup>
+                <div style={{ fontFamily: 'Arial', textAlign: 'center' }}>
+                  <div
+                    onClick={() =>
+                      router.push(`/StatsPage?lot=${encodeURIComponent(lot.name)}`)
+                    }
+                    style={{
+                      color: '#1E90FF',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      fontSize: 16,
+                      marginBottom: 4,
+                    }}
+                  >
+                    {lot.name}
+                  </div>
+                  <div style={{ fontSize: 14, color: '#333' }}>
+                    {available}/{lot.total} spots available
+                  </div>
+                  <div style={{ fontSize: 12, color: '#777', marginTop: 2 }}>
+                    Last updated: {lastUpdated}
+                  </div>
+                </div>
+              </Popup>
+            </CircleMarker>
+          );
+        })}
+      </MapContainer>
+    </View>
+
+{/* Calendar Button */}
+<TouchableOpacity
+  style={styles.calendarButton}
+  onPress={() => router.push('/calendar')}
+>
+  <Feather name="calendar" size={24} color="#fff" />
+</TouchableOpacity>
+
+{/* Feedback Button */}
+<TouchableOpacity
+  style={styles.feedbackButton}
+  onPress={() => setFeedbackVisible(true)}
+>
+  <Text style={styles.feedbackButtonText}>Feedback</Text>
+</TouchableOpacity>
+
 
       <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="🔍 Find Lot"
-          value={search}
-          onChangeText={setSearch}
-        />
+        <View style={styles.searchRow}>
+          <Feather name="search" size={20} color="#777" style={{ marginHorizontal: 10 }} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Find Lot"
+            placeholderTextColor="#777"
+            value={search}
+            onChangeText={setSearch}
+          />
+        </View>
+
         {renderSuggestions()}
       </View>
 
@@ -256,16 +320,44 @@ export default function HomeScreen() {
         </View>
       </Modal>
     </View>
-  );
-}
 
+);
+}
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: {
+    flex: 1,
+    backgroundColor: '#ffffff', // <-- WHITE BACKGROUND
+  },
+  centered: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  /** 🔘 Floating calendar button */
+  calendarButton: {
+    position: 'absolute',
+    bottom: 120,
+    left: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#222', // same design language
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 6,
+    zIndex: 20,
+  },
+
+  /** 🔍 Search bar */
   searchContainer: {
     position: 'absolute',
     bottom: 40,
     alignSelf: 'center',
-    backgroundColor: 'white',
+    backgroundColor: '#fff',
     width: '90%',
     borderRadius: 20,
     shadowColor: '#000',
@@ -273,11 +365,24 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
-  searchInput: {
-    padding: 12,
-    fontSize: 16,
-    borderRadius: 20,
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
   },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingRight: 12,
+    fontSize: 16,
+    color: '#333',
+    outlineWidth: 0,
+    outlineColor: 'transparent',
+    outlineStyle: 'none',
+    boxShadow: 'none',
+  },
+
+  /** Suggestions */
   suggestions: {
     maxHeight: 220,
     marginTop: 8,
@@ -298,6 +403,22 @@ const styles = StyleSheet.create({
     padding: 8,
     color: '#666',
   },
+  banner: {
+  width: "100%",
+  backgroundColor: "#ff4444",
+  paddingVertical: 10,
+  paddingHorizontal: 15,
+  justifyContent: "center",
+  alignItems: "center",
+  zIndex: 9999,
+  },
+  bannerText: {
+    color: "white",
+    fontWeight: "700",
+    fontSize: 16,
+    textAlign: "center",
+  },
+
   feedbackButton: {
     position: 'absolute',
     top: 90,
