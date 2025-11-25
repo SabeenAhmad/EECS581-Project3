@@ -122,7 +122,9 @@ export default function HomeScreen() {
     );
   };
     useEffect(() => {
-      const today = new Date().toISOString().split("T")[0];
+      const today = new Date().toLocaleDateString("en-CA");
+      console.log("today = ", today);
+      console.log("events matching today:", parkingEvents.filter(e => e.date === today));
 
       // Find events happening today
       const todayEvents = parkingEvents.filter(e => e.date === today);

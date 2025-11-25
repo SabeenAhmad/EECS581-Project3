@@ -23,7 +23,7 @@ export const parkingEvents: ParkingEvent[] = [
     title: 'KU Research Symposium',
     type: 'Campus Event',
     date: '2025-11-24',
-    time: '10:00 AM – 3:00 PM',
+    time: '10:00 AM – 9:00 PM',
     venue: 'Kansas Union Ballroom',
     lotsAffected: ['Mississippi Street Garage', 'Allen Fieldhouse Lot'],
     impactLevel: 'Medium',
