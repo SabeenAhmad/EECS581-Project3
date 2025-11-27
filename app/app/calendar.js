@@ -4,20 +4,18 @@ import { useRouter } from 'expo-router';
 import { useFonts, Poppins_600SemiBold } from '@expo-google-fonts/poppins';
 import { Inter_400Regular, Inter_600SemiBold } from '@expo-google-fonts/inter';
 
-import { parkingEvents, ParkingEvent } from '../src/data/parkingEvents';
+import { parkingEvents } from '../src/data/parkingEvents';
+import { useTheme } from './context/ThemeContext';
 
 // ---------- helpers ----------
 
-const impactStyles: Record<
-  ParkingEvent['impactLevel'],
-  { bg: string; text: string }
-> = {
+const impactStyles = {
   Low: { bg: '#C8FACC', text: '#2E7D32' },
   Medium: { bg: '#FFF7A3', text: '#A68B00' },
   High: { bg: '#FBC7C7', text: '#B11E1E' },
 };
 
-const typeColors: Record<ParkingEvent['type'], string> = {
+const typeColors = {
   Football: '#FF9C9C',
   Basketball: '#9BB9FF',
   'Campus Event': '#B9E5FF',
@@ -25,21 +23,20 @@ const typeColors: Record<ParkingEvent['type'], string> = {
 
 const weekdayShort = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
-const toISO = (d: Date) =>
-  d.toISOString().slice(0, 10); // YYYY-MM-DD
+const toISO = (d) => d.toISOString().slice(0, 10); // YYYY-MM-DD
 
-function buildMonthMatrix(year: number, month: number) {
-  // month is 0-based
+function buildMonthMatrix(year, month) {
+  // month is 0 based
   const first = new Date(year, month, 1);
   const firstWeekday = first.getDay(); // 0-6
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  const weeks: (Date | null)[][] = [];
+  const weeks = [];
   let currentDay = 1;
   let done = false;
 
   while (!done) {
-    const week: (Date | null)[] = [];
+    const week = [];
     for (let i = 0; i < 7; i++) {
       if (weeks.length === 0 && i < firstWeekday) {
         week.push(null);
@@ -56,7 +53,7 @@ function buildMonthMatrix(year: number, month: number) {
   return weeks;
 }
 
-const formatMonthYear = (year: number, month: number) =>
+const formatMonthYear = (year, month) =>
   new Date(year, month, 1).toLocaleDateString('en-US', {
     month: 'long',
     year: 'numeric',
@@ -66,6 +63,7 @@ const formatMonthYear = (year: number, month: number) =>
 
 export default function ParkingCalendarScreen() {
   const router = useRouter();
+  const { theme, colors } = useTheme();
 
   const [fontsLoaded] = useFonts({
     Poppins_600SemiBold,
@@ -75,12 +73,12 @@ export default function ParkingCalendarScreen() {
 
   const today = new Date();
   const [visibleYear, setVisibleYear] = useState(today.getFullYear());
-  const [visibleMonth, setVisibleMonth] = useState(today.getMonth()); // 0-based
-  const [selectedDate, setSelectedDate] = useState<string>(toISO(today));
+  const [visibleMonth, setVisibleMonth] = useState(today.getMonth()); // 0 based
+  const [selectedDate, setSelectedDate] = useState(toISO(today));
 
   // events indexed by date
   const eventsByDate = useMemo(() => {
-    const map: Record<string, ParkingEvent[]> = {};
+    const map = {};
     parkingEvents.forEach((ev) => {
       if (!map[ev.date]) map[ev.date] = [];
       map[ev.date].push(ev);
@@ -95,7 +93,7 @@ export default function ParkingCalendarScreen() {
 
   const selectedEvents = eventsByDate[selectedDate] ?? [];
 
-  const handleMonthChange = (delta: number) => {
+  const handleMonthChange = (delta) => {
     let m = visibleMonth + delta;
     let y = visibleYear;
     if (m < 0) {
@@ -111,40 +109,57 @@ export default function ParkingCalendarScreen() {
 
   if (!fontsLoaded) return null;
 
+  const secondaryTextColor = theme === 'dark' ? '#aaaaaa' : '#555555';
+  const mutedTextColor = theme === 'dark' ? '#888888' : '#8A8A8A';
+  const calendarCardBg = theme === 'dark' ? '#111827' : '#FDFCF7';
+  const selectedCellBg = theme === 'dark' ? '#222430' : '#EEEADD';
+  const eventCardBg = theme === 'dark' ? '#020617' : '#FFFFFF';
+  const eventDetailColor = theme === 'dark' ? '#cccccc' : '#555555';
+  const eventNoteColor = theme === 'dark' ? '#aaaaaa' : '#777777';
+
   return (
-    <ScrollView style={styles.container}>
-      {/* Back button like other screens */}
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      contentContainerStyle={{ paddingTop: 100, paddingHorizontal: 40, paddingBottom: 40 }}
+    >
+      {/* Back button */}
       <View style={styles.homeButtonContainer}>
-        <Text style={styles.homeButton} onPress={() => router.push('/')}>
+        <Text
+          style={[
+            styles.homeButton,
+            { backgroundColor: colors.buttonBackground, color: colors.buttonText },
+          ]}
+          onPress={() => router.push('/')}
+        >
           ← Back to Home
         </Text>
       </View>
 
       {/* Title */}
-      <Text style={styles.title}>Parking Impact Calendar</Text>
-      <Text style={styles.subtitle}>
+      <Text style={[styles.title, { color: colors.text }]}>Parking Impact Calendar</Text>
+      <Text style={[styles.subtitle, { color: secondaryTextColor }]}>
         See KU events that may affect parking availability
       </Text>
 
       {/* Month selector */}
       <View style={styles.monthRow}>
         <Pressable onPress={() => handleMonthChange(-1)}>
-          <Text style={styles.monthNav}>{'‹'}</Text>
+          <Text style={[styles.monthNav, { color: secondaryTextColor }]}>{'‹'}</Text>
         </Pressable>
-        <Text style={styles.monthLabel}>
+        <Text style={[styles.monthLabel, { color: colors.text }]}>
           {formatMonthYear(visibleYear, visibleMonth)}
         </Text>
         <Pressable onPress={() => handleMonthChange(1)}>
-          <Text style={styles.monthNav}>{'›'}</Text>
+          <Text style={[styles.monthNav, { color: secondaryTextColor }]}>{'›'}</Text>
         </Pressable>
       </View>
 
       {/* Calendar */}
-      <View style={styles.calendarCard}>
-        {/* Weekday header – similar to PopularTimes weekday row */}
+      <View style={[styles.calendarCard, { backgroundColor: calendarCardBg }]}>
+        {/* Weekday header */}
         <View style={styles.weekdayHeader}>
           {weekdayShort.map((d) => (
-            <Text key={d} style={styles.weekdayLabel}>
+            <Text key={d} style={[styles.weekdayLabel, { color: mutedTextColor }]}>
               {d}
             </Text>
           ))}
@@ -165,13 +180,11 @@ export default function ParkingCalendarScreen() {
                 const dayEvents = eventsByDate[iso] ?? [];
                 const hasEvents = dayEvents.length > 0;
 
-                // strongest impact for that day (if multiple events)
+                // strongest impact for that day
                 let dotColor = '#C8FACC';
                 if (dayEvents.some((e) => e.impactLevel === 'High')) {
                   dotColor = '#FF9C9C';
-                } else if (
-                  dayEvents.some((e) => e.impactLevel === 'Medium')
-                ) {
+                } else if (dayEvents.some((e) => e.impactLevel === 'Medium')) {
                   dotColor = '#FFE57E';
                 }
 
@@ -180,13 +193,14 @@ export default function ParkingCalendarScreen() {
                     key={di}
                     style={[
                       styles.dayCell,
-                      isSelected && styles.dayCellSelected,
+                      isSelected && { backgroundColor: selectedCellBg, borderRadius: 10 },
                     ]}
                     onPress={() => setSelectedDate(iso)}
                   >
                     <Text
                       style={[
                         styles.dayNumber,
+                        { color: colors.text },
                         isToday && styles.dayToday,
                         isSelected && styles.daySelectedText,
                       ]}
@@ -211,7 +225,7 @@ export default function ParkingCalendarScreen() {
 
       {/* Selected date events */}
       <View style={styles.eventsSection}>
-        <Text style={styles.eventsTitle}>
+        <Text style={[styles.eventsTitle, { color: colors.text }]}>
           {selectedEvents.length > 0
             ? 'Events affecting parking'
             : 'No major events on this day'}
@@ -222,13 +236,21 @@ export default function ParkingCalendarScreen() {
           const typeColor = typeColors[event.type];
 
           return (
-            <View key={event.id} style={styles.eventCard}>
+            <View
+              key={event.id}
+              style={[
+                styles.eventCard,
+                { backgroundColor: eventCardBg },
+              ]}
+            >
               <View
                 style={[styles.typeStrip, { backgroundColor: typeColor }]}
               />
               <View style={styles.eventContent}>
                 <View style={styles.eventHeaderRow}>
-                  <Text style={styles.eventTitle}>{event.title}</Text>
+                  <Text style={[styles.eventTitle, { color: colors.text }]}>
+                    {event.title}
+                  </Text>
                   <View
                     style={[
                       styles.impactBadge,
@@ -245,17 +267,19 @@ export default function ParkingCalendarScreen() {
                     </Text>
                   </View>
                 </View>
-                <Text style={styles.eventDetail}>
+                <Text style={[styles.eventDetail, { color: eventDetailColor }]}>
                   {event.time} · {event.venue}
                 </Text>
-                <Text style={styles.eventDetail}>
+                <Text style={[styles.eventDetail, { color: eventDetailColor }]}>
                   Affects{' '}
-                  <Text style={styles.eventLots}>
+                  <Text style={[styles.eventLots, { color: colors.text }]}>
                     {event.lotsAffected.join(', ')}
                   </Text>
                 </Text>
                 {event.notes && (
-                  <Text style={styles.eventNotes}>{event.notes}</Text>
+                  <Text style={[styles.eventNotes, { color: eventNoteColor }]}>
+                    {event.notes}
+                  </Text>
                 )}
               </View>
             </View>
@@ -273,9 +297,7 @@ export default function ParkingCalendarScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAF9F4',
-    paddingTop: 100,
-    paddingHorizontal: 40,
+    // backgroundColor is themed in render
   },
   homeButtonContainer: {
     position: 'absolute',
@@ -285,8 +307,6 @@ const styles = StyleSheet.create({
   },
   homeButton: {
     fontFamily: 'Inter_600SemiBold',
-    backgroundColor: '#222',
-    color: '#fff',
     paddingVertical: 10,
     paddingHorizontal: 18,
     borderRadius: 8,
@@ -299,13 +319,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 34,
     fontFamily: 'Poppins_600SemiBold',
-    color: '#222',
     marginBottom: 6,
   },
   subtitle: {
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
-    color: '#555',
     marginBottom: 18,
   },
 
@@ -319,16 +337,13 @@ const styles = StyleSheet.create({
   monthLabel: {
     fontSize: 18,
     fontFamily: 'Inter_600SemiBold',
-    color: '#222',
   },
   monthNav: {
     fontSize: 24,
     fontFamily: 'Inter_600SemiBold',
-    color: '#555',
   },
 
   calendarCard: {
-    backgroundColor: '#FDFCF7',
     borderRadius: 18,
     paddingVertical: 16,
     paddingHorizontal: 18,
@@ -348,7 +363,6 @@ const styles = StyleSheet.create({
   weekdayLabel: {
     fontSize: 11,
     fontFamily: 'Inter_400Regular',
-    color: '#8A8A8A',
   },
   grid: {
     gap: 4,
@@ -362,14 +376,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-start',
   },
-  dayCellSelected: {
-    backgroundColor: '#EEEADD',
-    borderRadius: 10,
-  },
   dayNumber: {
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
-    color: '#333',
   },
   dayToday: {
     fontFamily: 'Inter_600SemiBold',
@@ -377,7 +386,6 @@ const styles = StyleSheet.create({
   },
   daySelectedText: {
     fontFamily: 'Inter_600SemiBold',
-    color: '#000',
   },
   eventDot: {
     marginTop: 4,
@@ -392,12 +400,10 @@ const styles = StyleSheet.create({
   eventsTitle: {
     fontSize: 16,
     fontFamily: 'Inter_600SemiBold',
-    color: '#333',
     marginBottom: 10,
   },
   eventCard: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
     borderRadius: 14,
     overflow: 'hidden',
     marginBottom: 10,
@@ -426,7 +432,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     fontFamily: 'Inter_600SemiBold',
-    color: '#222',
   },
   impactBadge: {
     borderRadius: 999,
@@ -440,17 +445,14 @@ const styles = StyleSheet.create({
   eventDetail: {
     fontSize: 13,
     fontFamily: 'Inter_400Regular',
-    color: '#555',
     marginTop: 2,
   },
   eventLots: {
     fontFamily: 'Inter_600SemiBold',
-    color: '#333',
   },
   eventNotes: {
     fontSize: 12,
     fontFamily: 'Inter_400Regular',
-    color: '#777',
     marginTop: 6,
   },
 });

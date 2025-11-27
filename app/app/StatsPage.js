@@ -5,11 +5,14 @@ import { useFonts, Poppins_600SemiBold } from '@expo-google-fonts/poppins';
 import { Inter_400Regular, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import lots from '../src/data/mockParking';
 import PopularTimes from '../components/popular-times';
+import { useTheme } from './context/ThemeContext'; 
 
 export default function StatsPage() {
   const { lot } = useLocalSearchParams();
   const lotData = lots.find((l) => l.name === lot);
   const router = useRouter();
+
+  const { theme, colors } = useTheme(); 
 
   const [fontsLoaded] = useFonts({
     Poppins_600SemiBold,
@@ -20,14 +23,19 @@ export default function StatsPage() {
   const [lastUpdatedTime, setLastUpdatedTime] = useState(new Date());
 
   if (!fontsLoaded) return null;
-  if (!lotData) return <Text>Lot not found</Text>;
+  if (!lotData) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background, paddingTop: 100 }]}>
+        <Text style={{ color: colors.text, textAlign: 'center' }}>Lot not found</Text>
+      </View>
+    );
+  }
 
   const latest = lotData.dataPoints[lotData.dataPoints.length - 1];
   const occupied = latest.occupied;
   const percentFull = (occupied / lotData.total) * 100;
   const permitType = lotData.permit;
 
-  // Same idea as your second version: turn dataPoints into hourly percentages
   const getHourlyData = () => {
     const data = new Array(24).fill(0);
     lotData.dataPoints.forEach((point) => {
@@ -40,34 +48,52 @@ export default function StatsPage() {
 
   const hourlyData = getHourlyData();
 
-  // Dynamic bar color for the main progress bar
-  let barColor = '#9AE29B'; // green
-  if (percentFull >= 70) barColor = '#FF9C9C'; // red
-  else if (percentFull >= 40) barColor = '#FFE57E'; // yellow
+  // Dynamic bar color for occupancy
+  let barColor = '#9AE29B'; 
+  if (percentFull >= 70) barColor = '#FF9C9C';
+  else if (percentFull >= 40) barColor = '#FFE57E'; 
 
-  const colors = {
+  const colorsByPermit = {
     Green: { bg: '#C8FACC', border: '#8DD493' },
     Yellow: { bg: '#FFF7A3', border: '#E8D87A' },
     Red: { bg: '#FBC7C7', border: '#E89898' },
     Garage: { bg: '#DDE1E7', border: '#B0B8C2' },
   };
 
-  const color = colors[permitType] || colors.Garage;
+  const permitColors = colorsByPermit[permitType] || colorsByPermit.Garage;
+
+  // Progress bar background depends a bit on theme
+  const progressBg = theme === 'dark' ? '#222430' : '#F2F1E9';
+  const progressBorder = theme === 'dark' ? '#343846' : '#E0DECE';
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Home Button - same position as first design */}
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      contentContainerStyle={{ paddingTop: 100, paddingHorizontal: 40, paddingBottom: 40 }}
+    >
+      {/* Back Button */}
       <View style={styles.homeButtonContainer}>
-        <Text style={styles.homeButton} onPress={() => router.push('/')}>
+        <Text
+          style={[
+            styles.homeButton,
+            { backgroundColor: colors.buttonBackground, color: colors.buttonText },
+          ]}
+          onPress={() => router.push('/')}
+        >
           ← Back to Home
         </Text>
       </View>
 
       {/* Title */}
-      <Text style={styles.title}>{lotData.name}</Text>
+      <Text style={[styles.title, { color: colors.text }]}>{lotData.name}</Text>
 
       {/* Progress Bar */}
-      <View style={styles.progressContainer}>
+      <View
+        style={[
+          styles.progressContainer,
+          { backgroundColor: progressBg, borderColor: progressBorder },
+        ]}
+      >
         <View
           style={[
             styles.progressFill,
@@ -76,33 +102,37 @@ export default function StatsPage() {
         />
       </View>
 
-      {/* Top section: left (occupancy + permit), right (last updated + refresh) */}
+      {/* Top row */}
       <View style={styles.topRowContainer}>
         {/* LEFT SIDE */}
         <View style={styles.leftColumn}>
-          <Text style={styles.infoText}>
+          <Text style={[styles.infoText, { color: colors.text }]}>
             {occupied}/{lotData.total} spots taken
           </Text>
 
           <View
             style={[
               styles.permitTag,
-              { backgroundColor: color.bg, borderColor: color.border },
+              { backgroundColor: permitColors.bg, borderColor: permitColors.border },
             ]}
           >
-            {/* Permit text kept BLACK */}
             <Text style={styles.permitText}>{permitType} Permit</Text>
           </View>
         </View>
 
         {/* RIGHT SIDE */}
         <View style={styles.rightColumn}>
-          <Text style={styles.infoText}>
+          <Text style={[styles.infoText, { color: colors.text }]}>
             Last updated: {lastUpdatedTime.toLocaleTimeString()}
           </Text>
 
           <Text
-            style={styles.refreshButton}
+            style={[
+              styles.refreshButton,
+              {
+                backgroundColor: theme === 'dark' ? '#4EA1FF' : '#0073e6',
+              },
+            ]}
             onPress={() => setLastUpdatedTime(new Date())}
           >
             ↻ Refresh
@@ -110,10 +140,10 @@ export default function StatsPage() {
         </View>
       </View>
 
-      {/* Busy Hours Chart using PopularTimes component */}
+      {/* Busy Hours Chart */}
       <View style={styles.chartContainer}>
-        <Text style={styles.chartTitle}>Busy Hours</Text>
-        <PopularTimes data={getHourlyData()} maxCapacity={lotData.total} />
+        <Text style={[styles.chartTitle, { color: colors.text }]}>Busy Hours</Text>
+        <PopularTimes data={hourlyData} maxCapacity={lotData.total} />
       </View>
     </ScrollView>
   );
@@ -122,25 +152,20 @@ export default function StatsPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAF9F4',
-    paddingTop: 100,
-    paddingHorizontal: 40,
   },
   title: {
     fontSize: 42,
     fontFamily: 'Poppins_600SemiBold',
-    color: '#222',
     textAlign: 'left',
     marginBottom: 25,
   },
   progressContainer: {
     width: '100%',
     height: 20,
-    backgroundColor: '#F2F1E9',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E0DECE',
     overflow: 'hidden',
+    marginBottom: 16,
   },
   progressFill: {
     height: '100%',
@@ -149,7 +174,6 @@ const styles = StyleSheet.create({
   infoText: {
     fontSize: 15,
     fontFamily: 'Inter_400Regular',
-    color: '#333',
   },
   permitTag: {
     borderWidth: 1.5,
@@ -161,12 +185,12 @@ const styles = StyleSheet.create({
   permitText: {
     fontSize: 16,
     fontFamily: 'Inter_600SemiBold',
-    color: '#000', // explicitly black
+    color: '#000', // keep permit pill text black so the traffic-light colors pop
   },
   homeButtonContainer: {
     position: 'absolute',
-    top: 30,   // same as your first design
-    right: 20, // same as your first design
+    top: 30,
+    right: 20,
     zIndex: 10,
   },
   topRowContainer: {
@@ -188,8 +212,6 @@ const styles = StyleSheet.create({
   },
   homeButton: {
     fontFamily: 'Inter_600SemiBold',
-    backgroundColor: '#222',
-    color: '#fff',
     paddingVertical: 10,
     paddingHorizontal: 18,
     borderRadius: 8,
@@ -201,7 +223,6 @@ const styles = StyleSheet.create({
   },
   refreshButton: {
     fontFamily: 'Inter_600SemiBold',
-    backgroundColor: '#0073e6',
     color: 'white',
     paddingVertical: 8,
     paddingHorizontal: 16,
@@ -221,7 +242,6 @@ const styles = StyleSheet.create({
   chartTitle: {
     fontSize: 32,
     fontFamily: 'Poppins_600SemiBold',
-    color: '#222',
     marginBottom: 15,
   },
 });
